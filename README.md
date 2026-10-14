@@ -52,10 +52,11 @@ use test money; the same flow is verified on Tempo testnet (tx
 Node 24 or newer (the `.ts` files run as-is, no build step). The Supabase CLI and Docker only if you want your own scorer.
 
 ```
-(cd mcp && npm ci) && (cd scripts && npm ci)   # the pay tool and the demo drivers
-node merchant/server.ts       # the paid sites: localhost:4021, plus port 80 for the *.localhost names
-node stage/server.ts          # optional one-screen demo view on localhost:4030
+npm start
 ```
+
+That installs the deps on first run and starts the paid sites (`localhost:4021`, plus port 80 for the
+`*.localhost` names) and the one-screen demo view (`localhost:4030`).
 
 The scorer is a Supabase edge function; the demo runs against our hosted project. To run your own:
 
