@@ -21,10 +21,10 @@ Deno.serve(async (req) => {
 
     const key = req.headers.get("x-reflex-key");
     if (!key) return json({ error: "missing x-reflex-key" }, 401);
-    const [agent] = await sql`select id from reflex.agents where key_hash = ${await sha256(key)}`;
+    const [agent] = await sql`select id, test_only from reflex.agents where key_hash = ${await sha256(key)}`;
     if (!agent) return json({ error: "unknown agent key" }, 401);
 
-    if (req.method === "POST" && path === "/score") return await score(req, sql, agent.id);
+    if (req.method === "POST" && path === "/score") return await score(req, sql, agent.id, agent.test_only);
     if (req.method === "POST" && path === "/settle") return await settle(req, sql, agent.id);
     if (req.method === "GET" && path === "/feed") return await feed(url, sql, agent.id);
     const hold = path.match(/^\/holds\/([^/]+)$/);
@@ -117,12 +117,15 @@ function merchantSays(c: Challenge): string | null {
   }
 }
 
-async function score(req: Request, sql: Sql, agentId: string) {
+async function score(req: Request, sql: Sql, agentId: string, testOnly: boolean) {
   const body = await req.json().catch(() => null);
   const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
   if (reason.length < 8) return json({ error: "reason is required (at least 8 characters)" }, 400);
   const c = parseChallenge(body?.challenge);
   if (typeof c === "string") return json({ error: c }, 400);
+  // A shared key (the judges' guest key) only gets test payments: nothing it asks for is ever signed
+  // with a real wallet, even to a trusted payee or after a tap.
+  if (testOnly && c.method !== "stub") return json({ error: "this agent key is for test payments only" }, 403);
   const amountUsd = toUsd(c.amount, c.decimals);
   const amt = Number(amountUsd);
   const paymentId = crypto.randomUUID();

@@ -18,8 +18,12 @@ struct Overlay: Codable {
   let cx: Double?; let cy: Double?  // panel center, fractions of the frame from the top-left
   let dim: Double?; let fadeIn: Bool?; let fadeOut: Bool?
 }
-// Push in on a point of the picture (fractions from the top-left) and stay there.
-struct Zoom: Codable { let src: Double?; let seg: Int?; let off: Double?; let dur: Double; let cx: Double; let cy: Double; let scale: Double }
+// Push in on a point of the picture (fractions from the top-left) over `dur`. With `hold`, stay that long and
+// ease back out over `back` (default `dur`); without it, stay zoomed to the end.
+struct Zoom: Codable {
+  let src: Double?; let seg: Int?; let off: Double?; let dur: Double; let cx: Double; let cy: Double; let scale: Double
+  let hold: Double?; let back: Double?
+}
 struct Sound: Codable { let src: Double?; let seg: Int?; let off: Double?; let file: String; let volume: Float? }
 struct Spec: Codable {
   let src: String; let out: String; let segments: [Segment]; let overlays: [Overlay]; let zooms: [Zoom]?; let sounds: [Sound]?
@@ -284,19 +288,29 @@ Task {
     parent.frame = CGRect(x: 0, y: 0, width: W, height: H)
     videoLayer.frame = parent.frame
     parent.addSublayer(videoLayer)
-    for z in spec.zooms ?? [] {
+    for (i, z) in (spec.zooms ?? []).enumerated() {
       let q = (x: z.cx * W - W / 2, y: (1 - z.cy) * H - H / 2)
       let to = CATransform3DConcat(CATransform3DMakeScale(z.scale, z.scale, 1),
                                    CATransform3DMakeTranslation(-z.scale * q.x, -z.scale * q.y, 0))
-      let a = CABasicAnimation(keyPath: "transform")
-      a.fromValue = CATransform3DIdentity
-      a.toValue = to
+      let id = NSValue(caTransform3D: CATransform3DIdentity), zoomed = NSValue(caTransform3D: to)
+      let a = CAKeyframeAnimation(keyPath: "transform")
+      let ease = CAMediaTimingFunction(name: .easeInEaseOut), flat = CAMediaTimingFunction(name: .linear)
+      if let hold = z.hold {
+        let back = z.back ?? z.dur, total = z.dur + hold + back
+        a.values = [id, zoomed, zoomed, id]
+        a.keyTimes = [0, NSNumber(value: z.dur / total), NSNumber(value: (z.dur + hold) / total), 1]
+        a.timingFunctions = [ease, flat, ease]
+        a.duration = total
+      } else {
+        a.values = [id, zoomed]
+        a.timingFunctions = [ease]
+        a.duration = z.dur
+      }
       a.beginTime = begin(outTime(src: z.src, seg: z.seg, off: z.off))
-      a.duration = z.dur
-      a.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
       a.isRemovedOnCompletion = false
-      a.fillMode = .both
-      videoLayer.add(a, forKey: "zoom")
+      // Forwards only: a backwards fill would hold this zoom's start over any earlier zoom still running.
+      a.fillMode = .forwards
+      videoLayer.add(a, forKey: "zoom\(i)")
     }
     for o in spec.overlays {
       let at = outTime(src: o.src, seg: o.seg, off: o.off)
