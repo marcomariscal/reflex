@@ -1,0 +1,11 @@
+{
+  "amp.mcpServers": {
+    "reflex": {
+      "command": "/opt/homebrew/bin/node",
+      "args": ["/Users/dev/Documents/Codex/repos/reflex/mcp/src/server.ts"],
+      "env": {
+        "REFLEX_HOLD_WAIT_S": "120"
+      }
+    }
+  }
+}

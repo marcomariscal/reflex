@@ -1,0 +1,30 @@
+# Supabase CLI config for Reflex (trimmed). Remote project: zcbflnilhzdwocswluzg.
+project_id = "reflex"
+
+[api]
+enabled = true
+port = 54321
+# `reflex` is deliberately absent: its tables are never exposed over the API.
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+deno_version = 2
+
+# Both functions do their own auth (agent key, admin key, Telegram secret).
+[functions.reflex-score]
+verify_jwt = false
+
+[functions.reflex-telegram]
+verify_jwt = false

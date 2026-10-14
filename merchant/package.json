@@ -1,0 +1,11 @@
+{
+  "name": "reflex-merchant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local MPP-style paid API (method=stub) for the Reflex demo",
+  "scripts": {
+    "start": "node server.ts"
+  },
+  "engines": { "node": ">=25" }
+}

@@ -1,0 +1,20 @@
+{
+  "name": "reflex-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reflex MCP server: the pay tool, routed through the Reflex scorer",
+  "scripts": {
+    "start": "node src/server.ts",
+    "test": "node --test test/*.test.ts",
+    "e2e": "node test/e2e.ts"
+  },
+  "engines": {
+    "node": ">=25"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "mppx": "^0.13.4",
+    "zod": "^4.6.7"
+  }
+}
