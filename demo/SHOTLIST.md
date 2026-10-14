@@ -3,6 +3,8 @@
 The recording is the proof. Every scene has a **must-see**: the thing that
 has to be visible on screen for the scene to pass. A scene is green only when
 the recording shows the must-see. Anything short of that is reported as unproven.
+`npm test` (`scripts/test.ts`) runs scenes 1-4 through the real pay tool and
+checks the same must-sees from the feed and the merchant ledger.
 
 Screen layout for every scene: Amp on the left, Telegram on the right, the feed
 strip (`npm run tail`) along the bottom. Runbook and prompts: `demo/prompt.md`.

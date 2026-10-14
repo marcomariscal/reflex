@@ -106,8 +106,10 @@ Without a bot token the scorer still works; cards are logged instead of sent.
 
 One MCP server, `mcp/src/server.ts`, launched with `REFLEX_SCORER_URL` and `REFLEX_AGENT_KEY` in
 its env and nothing else ([mcp/amp-settings.example.json](mcp/amp-settings.example.json) for Amp;
-any MCP client works). `npm run loop` drives the tool without an agent, `npm run reset` gives you a
-clean slate between takes, and [demo/prompt.md](demo/prompt.md) is the scene.
+any MCP client works). `npm test` runs the shot list ([demo/SHOTLIST.md](demo/SHOTLIST.md)) through
+the real tool against your scorer, taps included: paid, held with the right reason, denied, attacker
+at $0, paused after a burst and resumed. `npm run loop` is the burst on its own, `npm run reset` a
+clean slate between takes, and [demo/prompt.md](demo/prompt.md) the scene.
 
 ## How it works
 

@@ -53,6 +53,12 @@ task-scoped mandates, and more rails (x402) next to MPP.
 TypeScript on Node 24, MCP SDK, Supabase (Postgres + Deno edge functions), mppx (Machine Payments
 Protocol), Tempo testnet, viem, Turnkey SDK, Telegram Bot API.
 
+**For judges who want to run it (optional):** clone, `npm start`, and in `.env` set
+`REFLEX_AGENT_KEY` to the judge key from the form. Then `npm test` runs the scenes against our hosted
+scorer with no further setup: the searches and the first report pay instantly, the hijacked request
+is held with "usually gets paid at a different wallet", the attacker's ledger stays at $0. (The judge
+agent has Startup News pre-trusted, since you can't tap Approve on our phone.)
+
 **Links:**
 - Repo: https://github.com/marcomariscal/reflex
 - Demo video: _link goes here_

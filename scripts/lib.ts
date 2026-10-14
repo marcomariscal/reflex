@@ -26,7 +26,9 @@ export type FeedItem = {
   recipient: string;
   reason: string;
   failed: string[]; // names of failed checks
+  why: string[]; // the failed checks' details, plain English
   tx_hash?: string | null;
+  hold_id?: string | null;
 };
 
 export async function feed(): Promise<FeedItem[]> {
@@ -36,11 +38,11 @@ export async function feed(): Promise<FeedItem[]> {
 }
 
 // Clean slate for a take: no payments or holds, agent unpaused, trusted addresses back to the seed.
-export async function reset(): Promise<void> {
+export async function reset(agent = process.env.REFLEX_AGENT ?? "amp-demo"): Promise<void> {
   const res = await fetch(`${env("REFLEX_SCORER_URL")}/admin/reset`, {
     method: "POST",
     headers: { "content-type": "application/json", "x-reflex-admin": env("REFLEX_ADMIN_KEY") },
-    body: JSON.stringify({ agent: "amp-demo" }),
+    body: JSON.stringify({ agent }),
   });
   if (!res.ok) throw new Error(`reset HTTP ${res.status}`);
   await fetch(`${MERCHANT_URL}/_ledger/reset`, { method: "POST" }).catch(() => {});
@@ -63,4 +65,21 @@ export async function startMcp(extra: Record<string, string> = {}) {
     },
     close: () => client.close(),
   };
+}
+
+// A tap on a card, the way Telegram would deliver it: approve:<hold>, deny:<hold>, resume:<agent>, keep:<agent>.
+// Needs REFLEX_TELEGRAM_URL, TELEGRAM_WEBHOOK_SECRET and TELEGRAM_CHAT_ID from .env. Returns the webhook's answer.
+export async function tap(action: "approve" | "deny" | "resume" | "keep", id: string): Promise<{ ok: boolean; result?: string; error?: string }> {
+  const chatEnv = env("TELEGRAM_CHAT_ID");
+  const chat = /^-?\d+$/.test(chatEnv) ? Number(chatEnv) : chatEnv;
+  const res = await fetch(env("REFLEX_TELEGRAM_URL"), {
+    method: "POST",
+    headers: { "content-type": "application/json", "X-Telegram-Bot-Api-Secret-Token": env("TELEGRAM_WEBHOOK_SECRET") },
+    body: JSON.stringify({
+      update_id: Date.now(),
+      callback_query: { from: { id: chat, is_bot: false }, message: { chat: { id: chat } }, data: `${action}:${id}` },
+    }),
+  });
+  if (!res.ok) return { ok: false, error: `webhook HTTP ${res.status}` };
+  return await res.json();
 }

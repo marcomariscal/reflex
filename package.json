@@ -5,6 +5,7 @@
   "description": "A payment firewall for AI agents. `npm start` runs the local demo.",
   "scripts": {
     "start": "node scripts/demo.ts",
+    "test": "node scripts/test.ts",
     "loop": "node scripts/loop.ts",
     "reset": "node scripts/reset.ts",
     "tail": "node scripts/tail.ts"
