@@ -127,7 +127,7 @@ clean slate between takes, and [demo/prompt.md](demo/prompt.md) the scene.
 
 Interfaces are in [CONTRACT.md](CONTRACT.md).
 
-## Questions a skeptical judge will ask
+## Objections
 
 - **"Don't people just use API keys?"** Keys are fine for the three services you set up by hand. Per-request
   payments (MPP, x402) let agents pay any service with no signup. The first time they can, they'll pay

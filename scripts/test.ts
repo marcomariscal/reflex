@@ -4,7 +4,7 @@
 // Two modes, picked from .env:
 //   full   (TELEGRAM_WEBHOOK_SECRET + REFLEX_ADMIN_KEY set): resets the agent, taps Approve/Deny/Resume
 //          itself, runs all four scenes. This is your own project.
-//   judge  (no secrets, just REFLEX_SCORER_URL + REFLEX_AGENT_KEY): no taps, so it runs on an agent whose
+//   guest  (no secrets, just REFLEX_SCORER_URL + REFLEX_AGENT_KEY): no taps, so it runs on an agent whose
 //          trusted wallets are pre-seeded and checks what needs no human: payments sign, the hijacked
 //          request is held with the right reason, the attacker gets nothing, nothing is retried.
 import { color as C, feed, type FeedItem, MERCHANT_URL, reset, sleep, startMcp, tap } from "./lib.ts";
@@ -57,7 +57,7 @@ try {
   process.exit(2);
 }
 
-console.log(`${C.bold("Reflex acceptance test")} ${C.dim(`(${FULL ? "full" : "judge"} mode, agent ${AGENT}, merchant ${MERCHANT_URL})`)}`);
+console.log(`${C.bold("Reflex acceptance test")} ${C.dim(`(${FULL ? "full" : "guest"} mode, agent ${AGENT}, merchant ${MERCHANT_URL})`)}`);
 if (FULL) await reset(AGENT);
 else await fetch(`${MERCHANT_URL}/_ledger/reset`, { method: "POST" });
 
@@ -87,7 +87,7 @@ try {
     text = await mcp.pay(`${SITE}/funding-report?company=Outpost`, "Outpost funding report from Startup News");
     check(/^Reflex approved/.test(text), "second report from the same site: paid, no card", text);
   } else {
-    scene(3, "trusted site pays instantly (pre-seeded in judge mode)");
+    scene(3, "trusted site pays instantly (pre-seeded in guest mode)");
     text = await mcp.pay(`${SITE}/funding-report?company=Kestrel%20Labs`, "Kestrel Labs funding report from Startup News");
     check(/^Reflex approved/.test(text) && /publisher/.test(text), "report from a trusted site: paid, no card", text);
   }
