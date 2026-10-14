@@ -10,30 +10,58 @@ export const usd = (n: number) => `$${n >= 0.01 || n === 0 ? n.toFixed(2) : Stri
 
 export type Card = { text: string; buttons: [label: string, data: string][] };
 
-type CardPayment = { agent_id: string; amount_usd: number; realm: string; recipient: string; reason: string; checks: Check[] };
+type CardPayment = {
+  agent_id: string;
+  amount_usd: number;
+  host: string; // the site our MCP code actually fetched
+  recipient: string;
+  reason: string;
+  checks: Check[];
+  description: string | null; // the merchant's own words from the 402
+};
 
-function summary(p: CardPayment) {
-  const failed = p.checks.filter((c) => !c.pass).map((c) => `• ${c.name}: ${esc(c.detail)}`);
-  const reason = p.reason.length > 300 ? `${p.reason.slice(0, 300)}…` : p.reason;
-  return [
-    `Agent <b>${esc(p.agent_id)}</b> wants to pay <b>${usd(p.amount_usd)}</b>`,
-    `to <code>${short(p.recipient)}</code> at ${esc(p.realm)}`,
-    ``,
-    `Reason: <i>${esc(reason)}</i>`,
-    ``,
-    `Failed checks:`,
-    ...failed,
-  ].join("\n");
-}
+// Agent- and merchant-written text: one line, bounded, so it can't fake card structure.
+const flat = (s: string, n: number) => {
+  const t = s.replace(/\s+/g, " ").trim();
+  return esc(t.length > n ? `${t.slice(0, n)}…` : t);
+};
+
+// What Reflex checked comes first. What the agent and the site say comes last and is
+// labeled: either can lie, and the agent's text may be trying to talk you into Approve.
+const claims = (p: CardPayment) => [
+  `<b>What they say</b> (not verified)`,
+  ...(p.description ? [`Site: <i>"${flat(p.description, 120)}"</i>`] : []),
+  `Agent: <i>"${flat(p.reason, 300)}"</i>`,
+];
+
+const payLine = (p: CardPayment) =>
+  `<b>${usd(p.amount_usd)}</b> to <code>${short(p.recipient)}</code> on ${esc(p.host)}`;
 
 export const paymentCard = (p: CardPayment, holdId: string): Card => ({
-  text: `<b>Reflex held a payment</b>\n\n${summary(p)}`,
+  text: [
+    `<b>${esc(p.agent_id)} wants to pay ${usd(p.amount_usd)}. Your OK?</b>`,
+    ``,
+    payLine(p),
+    ``,
+    `<b>Why Reflex is asking</b>`,
+    ...p.checks.filter((c) => !c.pass).map((c) => `• ${esc(c.detail)}`),
+    ``,
+    ...claims(p),
+  ].join("\n"),
   buttons: [["Approve", `approve:${holdId}`], ["Deny", `deny:${holdId}`]],
 });
 
 export const pauseCard = (p: CardPayment, limit: number, windowS: number): Card => ({
-  text: `<b>Reflex paused ${esc(p.agent_id)}</b>\n\n${limit} payments in ${windowS}s hit the velocity limit. ` +
-    `Every further payment is held silently until you decide.\n\nLast attempt:\n${summary(p)}`,
+  text: [
+    `<b>Reflex paused ${esc(p.agent_id)}</b>`,
+    ``,
+    `It tried ${limit} payments in ${windowS} seconds, which looks like a loop. ` +
+    `Anything else it tries will wait until you decide.`,
+    ``,
+    `Last attempt: ${payLine(p)}`,
+    ``,
+    ...claims(p),
+  ].join("\n"),
   buttons: [["Resume", `resume:${p.agent_id}`], ["Keep paused", `keep:${p.agent_id}`]],
 });
 

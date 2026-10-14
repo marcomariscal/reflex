@@ -1,14 +1,15 @@
 // Live decision feed - the bottom strip in the recording.
 // Polls the scorer /feed every second and prints one colored line per NEW
 // payment, e.g.
-//   16:40:02  SIGN   $0.01    localhost:4021  OKcap OKpayee OKamount OKvelocity  "reason..."
-//   16:40:05  HOLD   $4.99    localhost:4021  OKcap XXpayee OKamount OKvelocity  "reason..."
+//   16:40:02  APPROVED   $0.01  localhost:4021  ✓ limits  ✓ known payee  ✓ normal amount  ✓ pace  "reason..."
+//   16:40:05  ASKING     $4.99  localhost:4021  ✓ limits  ✗ known payee  ✓ normal amount  ✓ pace  "reason..."
 //   16:40:06  PAUSED
 // Run with `npm run tail`. Ctrl-C to stop.
 
 import { feed, color as C, sleep, type FeedItem } from "./lib.ts";
 
-const CHECKS = ["cap", "payee", "amount", "velocity"] as const;
+// Internal check names -> what a viewer of the recording should read.
+const CHECKS = [["cap", "limits"], ["payee", "known payee"], ["amount", "normal amount"], ["velocity", "pace"]] as const;
 
 function hhmmss(iso: string): string {
   const d = new Date(iso);
@@ -18,19 +19,18 @@ function hhmmss(iso: string): string {
 
 function label(status: string): { text: string; paint: (s: string) => string } {
   const s = status.toLowerCase();
-  if (s === "signed" || s === "sign") return { text: "SIGN  ", paint: C.green };
-  if (s === "paid" || s === "settled") return { text: "PAID  ", paint: C.green };
-  if (s === "held" || s === "hold" || s === "pending") return { text: "HOLD  ", paint: C.yellow };
-  if (s === "denied" || s === "deny") return { text: "DENY  ", paint: C.red };
-  if (s === "failed") return { text: "FAIL  ", paint: C.red };
-  if (s === "expired") return { text: "EXPIRE", paint: C.dim };
-  if (s.includes("paus")) return { text: "PAUSED", paint: C.cyan };
-  return { text: status.toUpperCase().padEnd(6).slice(0, 6), paint: (x: string) => x };
+  if (s === "signed" || s === "sign" || s === "paid" || s === "settled") return { text: "APPROVED", paint: C.green };
+  if (s === "held" || s === "hold" || s === "pending") return { text: "ASKING  ", paint: C.yellow };
+  if (s === "denied" || s === "deny") return { text: "DENIED  ", paint: C.red };
+  if (s === "failed") return { text: "FAILED  ", paint: C.red };
+  if (s === "expired") return { text: "EXPIRED ", paint: C.dim };
+  if (s.includes("paus")) return { text: "PAUSED  ", paint: C.cyan };
+  return { text: status.toUpperCase().padEnd(8).slice(0, 8), paint: (x: string) => x };
 }
 
 function checksStr(item: FeedItem): string {
   const failed = new Set((item.failed ?? []).map((f) => f.toLowerCase()));
-  return CHECKS.map((c) => (failed.has(c) ? C.red("x" + c) : C.green("ok" + c))).join(" ");
+  return CHECKS.map(([c, name]) => (failed.has(c) ? C.red("✗ " + name) : C.green("✓ " + name))).join("  ");
 }
 
 function line(item: FeedItem): string {
@@ -41,7 +41,7 @@ function line(item: FeedItem): string {
   const reason = item.reason ? `"${item.reason.slice(0, 48)}${item.reason.length > 48 ? "..." : ""}"` : "";
   const tx = item.tx_hash ? C.dim(" tx:" + String(item.tx_hash).slice(0, 10)) : "";
   // A velocity trip is the pause point; flag it loudly.
-  const paused = (item.failed ?? []).map((f) => f.toLowerCase()).includes("velocity") ? C.cyan("  <- PAUSE") : "";
+  const paused = (item.failed ?? []).map((f) => f.toLowerCase()).includes("velocity") ? C.cyan("  <- loop detected, agent paused") : "";
   return `${t}  ${paint(text)} ${amt}  ${realm}  ${checksStr(item)}  ${reason}${tx}${paused}`;
 }
 

@@ -6,7 +6,6 @@
   "description": "Reflex MCP server: the pay tool, routed through the Reflex scorer",
   "scripts": {
     "start": "node src/server.ts",
-    "test": "node --test test/*.test.ts",
     "e2e": "node test/e2e.ts"
   },
   "engines": {

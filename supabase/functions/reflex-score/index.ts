@@ -5,6 +5,7 @@ import { background, json, safeEq, sha256, UUID } from "../_shared/http.ts";
 import { sign } from "../_shared/signer.ts";
 import { type Card, pauseCard, paymentCard, sendCard, short, usd } from "../_shared/telegram.ts";
 import type { Challenge, Check } from "../_shared/types.ts";
+import { Challenge as Mpp } from "npm:mppx@0.13.4";
 
 const ADMIN_KEY = Deno.env.get("REFLEX_ADMIN_KEY") ?? "";
 const micros = (n: number) => Math.round(n * 1e6);
@@ -61,6 +62,25 @@ function toUsd(amount: string, decimals: number) {
   return decimals ? `${s.slice(0, -decimals)}.${s.slice(-decimals)}` : s;
 }
 
+// The host our MCP code actually fetched; unlike the challenge's realm, the merchant can't pick it.
+function hostOf(url: unknown): string | null {
+  try {
+    return typeof url === "string" ? new URL(url).host : null;
+  } catch {
+    return null;
+  }
+}
+
+// The merchant's own description of what it's selling, from the raw 402.
+function merchantSays(c: Challenge): string | null {
+  try {
+    const d = Mpp.deserializeList(c.raw).find((x) => x.id === c.id)?.description;
+    return typeof d === "string" && d.trim() ? d : null;
+  } catch {
+    return null;
+  }
+}
+
 async function score(req: Request, sql: Sql, agentId: string) {
   const body = await req.json().catch(() => null);
   const reason = typeof body?.reason === "string" ? body.reason.trim() : "";
@@ -92,23 +112,32 @@ async function score(req: Request, sql: Sql, agentId: string) {
     const known = a.base_max != null;
     const amountOk = !known || micros(amt) <= 2 * micros(a.base_max);
     const velocityOk = !paused && a.recent < a.velocity_limit;
+    // Plain-English details: they show up on the Telegram card and in the agent's tool output.
     const checks: Check[] = [
       {
         name: "cap", pass: capOk,
         detail: overCap
-          ? `${usd(amt)} > ${usd(a.cap)} per-payment cap`
-          : `${usd(amt)} <= ${usd(a.cap)} per payment; ${usd(a.today)} today + ${usd(amt)} ${capOk ? "<=" : ">"} ${usd(a.daily)} daily`,
+          ? `${usd(amt)} is over your ${usd(a.cap)} limit per payment`
+          : capOk
+          ? `within your ${usd(a.cap)} per-payment and ${usd(a.daily)} daily limits`
+          : `would bring today's spending to ${usd(a.today + amt)}, over your ${usd(a.daily)} daily limit`,
       },
-      { name: "payee", pass: known, detail: known ? `${short(c.recipient)} is baselined` : `new payee ${short(c.recipient)}` },
+      { name: "payee", pass: known, detail: known ? "has paid this address before" : "first payment to this address" },
       {
         name: "amount", pass: amountOk,
-        detail: known ? `${usd(amt)} ${amountOk ? "<=" : ">"} 2x largest paid (${usd(a.base_max)})` : "no baseline for this payee",
+        detail: !known
+          ? "no payment history with this address yet"
+          : amountOk
+          ? `in line with what you've approved here (most: ${usd(a.base_max)})`
+          : `more than double the most you've approved here (${usd(a.base_max)})`,
       },
       {
         name: "velocity", pass: velocityOk,
         detail: paused
-          ? `agent paused since ${a.paused_at.toISOString()}`
-          : `${a.recent} payments in last ${a.velocity_window_s}s (limit ${a.velocity_limit})`,
+          ? "agent is paused until you resume it"
+          : velocityOk
+          ? `${a.recent} payments in the last ${a.velocity_window_s}s (limit ${a.velocity_limit})`
+          : `${a.recent} payments in the last ${a.velocity_window_s}s, looks like a loop (limit ${a.velocity_limit})`,
       },
     ];
 
@@ -142,7 +171,10 @@ async function score(req: Request, sql: Sql, agentId: string) {
     await tx`insert into reflex.holds (id, agent_id, payment_id, kind) values (${holdId}, ${agentId}, ${paymentId}, 'payment')`;
 
     // Paused: hold silently. Velocity trips now: pause and send exactly one pause card. Otherwise: a hold card.
-    const info = { agent_id: agentId, amount_usd: amt, realm: c.realm, recipient: c.recipient, reason, checks };
+    const info = {
+      agent_id: agentId, amount_usd: amt, realm: c.realm, recipient: c.recipient, reason, checks,
+      host: hostOf(body.url) ?? c.realm, description: merchantSays(c),
+    };
     const trip = !paused && !velocityOk;
     let card: { holdId: string; card: Card } | null = null;
     if (trip) {

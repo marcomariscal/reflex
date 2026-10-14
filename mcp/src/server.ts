@@ -61,7 +61,7 @@ async function bodyText(res: Response): Promise<string> {
 }
 
 const failedChecks = (checks: Check[] = []) =>
-  checks.filter((c) => !c.pass).map((c) => (c.detail ? `${c.name}: ${c.detail}` : c.name)).join("; ");
+  checks.filter((c) => !c.pass).map((c) => c.detail || c.name).join("; ");
 
 // Paid retry with the credential, report the outcome to the scorer, return the merchant's body.
 async function payAndSettle(url: string, req: Req, c: Challenge, credential: string, headline: string, paymentId: string | null): Promise<Result> {

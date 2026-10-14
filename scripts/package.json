@@ -9,14 +9,9 @@
   "scripts": {
     "merchant": "cd .. && node merchant/server.ts",
     "tail": "node tail.ts",
-    "verify": "node run-all.ts",
-    "scene0": "node 03-poisoned-pay.ts --bypass",
-    "01": "node 01-one-payment.ts",
-    "02": "node 02-loop-50.ts",
-    "03": "node 03-poisoned-pay.ts",
-    "04": "node 04-cap-200.ts",
-    "05": "node 05-approve-learns.ts",
-    "dry": "for f in 01-one-payment 02-loop-50 03-poisoned-pay 04-cap-200 05-approve-learns; do node $f.ts --dry || exit 1; done"
+    "loop": "node loop.ts",
+    "reset": "node reset.ts",
+    "setup-telegram": "node setup-telegram.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1"

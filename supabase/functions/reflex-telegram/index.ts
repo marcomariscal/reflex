@@ -2,7 +2,7 @@
 // Callback data: approve:<hold_id> | deny:<hold_id> | resume:<agent_id> | keep:<agent_id>
 import { connect, type Sql } from "../_shared/db.ts";
 import { background, json, safeEq, UUID } from "../_shared/http.ts";
-import { answerCallback, closeCard, short } from "../_shared/telegram.ts";
+import { answerCallback, closeCard, short, usd } from "../_shared/telegram.ts";
 
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
 // Unset (stub mode): any callback carrying the secret header counts, so tests can drive it.
@@ -67,16 +67,21 @@ async function decideHold(sql: Sql, action: "approve" | "deny", holdId: string, 
     await tx`update reflex.holds set status = ${status}, decided_by = ${by}, decided_at = now() where id = ${holdId}`;
     if (action === "deny") {
       await tx`update reflex.payments set status = 'denied' where id = ${h.payment_id}`;
-      return { ok: true, result: status, verb: "Denied", rest: "The agent was told not to retry." };
+      return { ok: true, result: status, verb: "Denied", rest: "No money moved, and the agent was told not to try again." };
     }
-    // The learning: the payee joins the baseline at this amount. The payment itself signs on the agent's next poll.
-    await tx`
+    // The learning: this address becomes trusted at this amount. The payment itself signs on the agent's next poll.
+    const [b] = await tx`
       insert into reflex.baselines (agent_id, recipient, max_usd, payment_count, source, last_paid_at)
       values (${h.agent_id}, ${h.recipient}, ${h.amount_usd}::numeric, 1, 'approved', now())
       on conflict (agent_id, recipient) do update
       set max_usd = greatest(baselines.max_usd, excluded.max_usd), payment_count = baselines.payment_count + 1,
-        last_paid_at = now()`;
-    return { ok: true, result: status, verb: "Approved", rest: `${short(h.recipient)} is now baselined.` };
+        last_paid_at = now()
+      returning max_usd::float8 as max_usd`;
+    const upTo = usd(2 * b.max_usd);
+    return {
+      ok: true, result: status, verb: "Approved",
+      rest: `From now on, payments to ${short(h.recipient)} up to ${upTo} go through without asking you.`,
+    };
   });
 }
 
@@ -104,7 +109,7 @@ async function decidePause(sql: Sql, action: "resume" | "keep", agentId: string,
       where agent_id = ${agentId} and kind = 'pause' and status = 'pending'`;
     if (resume) await tx`update reflex.agents set paused_at = null, resumed_at = now() where id = ${agentId}`;
     return resume
-      ? { ok: true, result: "resumed", verb: "Resumed", rest: `${held.length} held payments expired.` }
-      : { ok: true, result: "kept paused", verb: "Kept paused", rest: `${held.length} held payments denied.` };
+      ? { ok: true, result: "resumed", verb: "Resumed", rest: `It can pay again. The ${held.length} payments it tried while paused were cancelled.` }
+      : { ok: true, result: "kept paused", verb: "Kept paused", rest: `The ${held.length} payments it tried while paused were denied.` };
   });
 }
