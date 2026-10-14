@@ -158,7 +158,7 @@ Interfaces are in [CONTRACT.md](CONTRACT.md).
   same site, same page, same price. Reflex judges the money, not the story.
 - **"What if the wallet is swapped on the very first payment?"** Then the card says "New site, never
   paid before" and Reflex can't tell the difference. That's trust on first use, the same limit as SSH.
-  Signals across users and sites that declare their own wallet (What's next) close it.
+  Signals across users, wallet age on the card and sites that declare their wallet (What's next) close it.
 - **"So it asks me about every new vendor?"** Once per wallet, forever. Then only when something
   changes: a new wallet, a bigger amount, a burst.
 - **"Isn't this centralized?"** Today it's a copy you run, and it fails closed (scorer down means no
@@ -193,8 +193,13 @@ but not yet in use, so the wallet-side $200 cap is not live.
 - **Signals across users.** Never share approvals, but share counts: "approved by 40 people" can skip
   the tap for tiny payments, "denied by 12 this week" gets a stronger warning, weighted by account age
   and real spending so fake accounts can't game it.
-- **Sites that declare their wallet.** A wallet address the site signs and publishes on its own domain
-  catches a swapped wallet even on the very first payment.
+- **Wallet age on the card.** One chain lookup per new wallet: a real business wallet has months of
+  incoming payments, an attacker's is often hours old. "This wallet was created 2 hours ago" helps on the
+  very first payment, with no other users needed.
+- **Sites that declare their wallet.** A signed wallet address the site publishes, which Reflex
+  remembers, catches a swapped wallet even on the very first payment. It only holds if the signing key
+  lives off the web server, or the declaration is anchored outside DNS (an on-chain name or a merchant
+  directory) and changes need the old key; otherwise whoever hacks the site rewrites the declaration too.
 - **Fewer taps.** Tiny first payments to new wallets ($0.01 searches) sign without asking; trusted
   directories of known merchants count as "paid before".
 - **Mandates.** A task-scoped budget and payee set granted up front ("$5, these two sites, next hour"),
