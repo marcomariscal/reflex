@@ -230,7 +230,7 @@ server.registerTool(
       "Free URLs are returned without paying.",
     inputSchema: {
       url: z.url().describe("The URL to fetch"),
-      reason: z.string().min(8).describe("why this payment is needed for the user's task; shown to the human approver"),
+      reason: z.string().min(8).describe("what this payment buys, in a few words (e.g. 'Taskwise funding report'); shown to the human approver as 'For: ...'"),
       method: z.enum(["GET", "POST"]).optional().describe("HTTP method (default GET)"),
       body: z.string().optional().describe("Request body for POST"),
     },

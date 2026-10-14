@@ -36,6 +36,18 @@ history is "licensed from our data partner, $3.99", paid to its own address.
 Taps: click the phone's buttons, tap the real Telegram card, or
 `curl -X POST "localhost:4030/decide?action=approve|deny"`.
 
+## Recording the real-window take (what the final video uses)
+
+Two windows only: Amp on the left, Telegram (the Reflex chat, history cleared) on the right.
+
+1. `node scripts/reset.ts` and `curl -X POST localhost:4021/_ledger/reset`.
+2. Start Screen Studio (Record display).
+3. Launch Amp with the prompt typed at human speed:
+   `ghostty -e /bin/zsh -lc "cd ~/reflex-demo && expect ~/Documents/Codex/repos/reflex/scripts/amp-take.exp ~/Documents/Codex/repos/reflex/demo/take-prompt.txt"`
+4. In Telegram: **Approve** the "New site, never paid before" card (Relay Labs report), **Deny** the
+   "⚠️ Not the wallet this site usually uses" card (Taskwise report).
+5. Amp finishes and explains the blocked payment. Stop recording.
+
 ## Q&A extras (not in the video)
 
 - Runaway loop: `node scripts/loop.ts`, one pause card instead of forty.

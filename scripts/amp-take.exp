@@ -1,0 +1,20 @@
+#!/usr/bin/expect -f
+# Start Amp's real interface in Claude Code mode and type the demo prompt like a person, keystroke by
+# keystroke and visible as it goes, then hand the session over.
+set f [open [lindex $argv 0]]
+set prompt [read -nonewline $f]
+close $f
+spawn -noecho /Users/dev/.local/bin/amp -m external-agent:claude-code
+# Let Amp draw its screen (expect only shows output while it is reading).
+set timeout 7
+expect -re {^\b$}
+foreach c [split $prompt ""] {
+  send -- $c
+  set timeout 0
+  expect -re {.+}
+  after [expr {35 + int(rand() * 70)}]
+}
+set timeout 1
+expect -re {^\b$}
+send -- "\r"
+interact

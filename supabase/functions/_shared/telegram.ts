@@ -49,7 +49,7 @@ export const paymentCard = (p: CardPayment, holdId: string): Card => ({
     `<b>${who(p.agent_id)} wants to pay ${usd(p.amount_usd)} to ${esc(p.host)}</b>`,
     // amount is implied by a payee flag when both fail; keep the most telling reason first
     ...p.checks.filter((c) => !c.pass).sort((a, b) => (a.name === "payee" ? -1 : b.name === "payee" ? 1 : 0)).map(flag),
-    `<i>${flat(p.reason, 90)}</i>`,
+    `For: <i>${flat(p.reason, 90)}</i>`,
   ].join("\n"),
   buttons: [["Approve", `approve:${holdId}`], ["Deny", `deny:${holdId}`]],
 });
