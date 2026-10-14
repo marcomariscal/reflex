@@ -43,7 +43,7 @@ Two windows only: Amp on the left, Telegram (the Reflex chat, history cleared) o
 1. `node scripts/reset.ts` and `curl -X POST localhost:4021/_ledger/reset`.
 2. Start Screen Studio (Record display).
 3. Launch Amp with the prompt typed at human speed:
-   `ghostty -e /bin/zsh -lc "cd ~/reflex-demo && expect ~/Documents/Codex/repos/reflex/scripts/amp-take.exp ~/Documents/Codex/repos/reflex/demo/take-prompt.txt"`
+   `ghostty -e /bin/zsh -lc "cd ~/reflex-demo && expect <repo>/scripts/amp-take.exp <repo>/demo/take-prompt.txt"`
 4. In Telegram: **Approve** the "New site, never paid before" card (Kestrel Labs report), **Deny** the
    "⚠️ Not the wallet this site usually uses" card (Taskwise report).
 5. Amp finishes and explains the blocked payment. Stop recording.
@@ -54,5 +54,5 @@ Two windows only: Amp on the left, Telegram (the Reflex chat, history cleared) o
 
 ## Q&A extras (not in the video)
 
-- Runaway loop: `node scripts/loop.ts`, one pause card instead of forty.
+- Runaway loop: `npm run loop`, one pause card instead of fifty.
 - $200 wallet cap: needs Turnkey; Approve a $250 hold and Turnkey refuses to sign.

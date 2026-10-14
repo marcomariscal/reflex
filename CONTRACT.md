@@ -86,7 +86,7 @@ unpauses the agent, and resets the baseline to the seed. Body `{ "agent": "amp-d
 1. **cap**: `amount_usd <= per_payment_cap_usd` (25) and today's signed total + amount `<= daily_cap_usd` (100).
 2. **payee**: `recipient` is in `baselines` for this agent.
 3. **amount**: `amount_usd <= 2 * baselines.max_usd` for that recipient. Pass if no baseline (payee covers it).
-4. **velocity**: fewer than `velocity_limit` (10) scored payments in the last `velocity_window_s` (60). On fail, set `agents.paused_at`.
+4. **velocity**: fewer than `velocity_limit` (25) scored payments in the last `velocity_window_s` (60). On fail, set `agents.paused_at`.
 
 If the agent is paused, every request is held with no new Telegram card. When
 velocity first trips, exactly one "paused" card is sent.

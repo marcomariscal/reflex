@@ -13,7 +13,7 @@ strip (`npm run tail`) along the bottom. Runbook and prompts: `demo/prompt.md`.
 | 1 | Normal payment | Amp | Paid instantly, no card; feed `APPROVED` with all four checks green | stub + testnet |
 | 2 | Hijacked wallet | Amp | Card: "⚠️ Not the wallet this site usually uses"; tap Deny; agent told not to retry; attacker gets $0 | stub |
 | 3 | One Approve teaches Reflex | Amp | Card, tap Approve, paid; second call paid with no card | stub + testnet |
-| 4 | Runaway loop | `npm run loop` | 10 paid, then paused; exactly **one** card; tap Resume | stub |
+| 4 | Runaway loop | `npm run loop` | 25 paid, then paused; exactly **one** card; tap Resume | stub |
 | 5 | Wallet's $200 limit | Amp | $250 card; tap Approve anyway; Turnkey refuses to sign; nothing paid | needs Turnkey |
 
 Proven on Tempo testnet already (2026-10-13): a new address was held, approved by a
@@ -24,7 +24,7 @@ real tap, then paid on-chain; the second payment went through with no card.
 1. **Cap**: amount <= per-payment cap ($25) and today's total + amount <= daily cap ($100).
 2. **Payee**: recipient address is in this agent's baseline.
 3. **Amount**: amount <= 2x the largest amount you have approved for this address (auto-approved payments never raise it).
-4. **Velocity**: fewer than 10 payments in the last 60 s. Tripping it pauses the agent.
+4. **Velocity**: fewer than 25 payments in the last 60 s. Tripping it pauses the agent.
 
 All pass: sign. Any fail: hold and ask on Telegram. `reason` is required on every
 `pay` call and is shown on the card.

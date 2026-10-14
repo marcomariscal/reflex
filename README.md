@@ -21,7 +21,7 @@ Every payment, in milliseconds, against facts the agent can't fake:
 | Limits | under $25 per payment and $100 per day |
 | Payee | you've paid this wallet before, or approved it once |
 | Amount | no more than 2x the most you've approved for that wallet |
-| Pace | fewer than 10 payments a minute (a burst pauses the agent: one card, not forty) |
+| Pace | fewer than 25 payments a minute (a burst pauses the agent: one card, not forty) |
 
 Any failure holds the payment and sends a Telegram card. Approve teaches Reflex that wallet.
 The agent's stated reason is shown on the card but never used to decide, because a tricked agent
@@ -37,11 +37,12 @@ never sees wallets.
 
 ## The demo
 
-You ask your agent (Amp, in Claude Code mode) for an investor brief on two startups. It pays a search
-API it already uses (goes through), buys a report from Startup News (new site: you approve once),
-then tries to buy the second report from the same site, whose payment request has been tampered with
-to pay a stranger's wallet. Same site, same price; the agent can't tell. Reflex holds it, you deny,
-nothing is paid, and the agent explains what happened.
+You ask your agent (Amp, in Claude Code mode) for an investor brief on three startups. It pays a
+search API it already uses (goes through), buys the first report from Startup News (new site: you
+approve once), buys the second from the same site (no card: it's trusted now), then tries to buy the
+third, whose payment request has been tampered with to pay a stranger's wallet. Same site, same
+price; the agent can't tell. Reflex holds it, you deny, nothing is paid, and the agent explains what
+happened.
 
 Runbook: [demo/prompt.md](demo/prompt.md). The sites are simulated on the laptop (`*.localhost`) and
 use test money; the same flow is verified on Tempo testnet (tx
@@ -70,14 +71,14 @@ uses ours; you need your own project (free tier is fine) because the agent key i
 cp .env.example .env                                   # then fill it in as you go
 openssl rand -hex 32                                   # run three times: REFLEX_AGENT_KEY, REFLEX_ADMIN_KEY, TELEGRAM_WEBHOOK_SECRET
 supabase login && supabase link --project-ref <ref>    # your project; put <ref> in .env's REFLEX_* URLs
-supabase db push                                       # schema and deny-all policies
-psql "$DB_URL" -f supabase/seed.sql                    # the demo agent; DB_URL is in the dashboard under Connect
+supabase db push --include-seed                        # schema, deny-all policies, the demo agent
 supabase secrets set REFLEX_ADMIN_KEY=... TELEGRAM_WEBHOOK_SECRET=...
 supabase functions deploy                              # both functions
 ```
 
 Then store the agent key's hash on the seeded agent: the two commands at the top of
-[supabase/seed.sql](supabase/seed.sql). The key itself stays in `.env` and is the only thing the
+[supabase/seed.sql](supabase/seed.sql) (`psql` with the connection string from the dashboard, or paste
+the `update` into the SQL editor). The key itself stays in `.env` and is the only thing the
 agent is given. `SUPABASE_DB_URL` is provided by the runtime; nothing else is needed for the local
 sites (`method=stub`). For Tempo testnet payments add `TEMPO_DEV_PRIVATE_KEY` (a funded throwaway key)
 to the secrets; for Turnkey, the `TURNKEY_*` secrets from `.env.example`.

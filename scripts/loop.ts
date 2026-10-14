@@ -1,5 +1,5 @@
 // Scene 4 driver: an agent stuck in a loop fires 50 paid searches through the real pay tool.
-// Expect: the first 10 go through, then Reflex pauses the agent and sends ONE card.
+// Expect: the first 25 go through, then Reflex pauses the agent and sends ONE card.
 // Tap Resume or Keep paused on your phone to finish the scene.
 import { color as C, MERCHANT_URL, startMcp } from "./lib.ts";
 
