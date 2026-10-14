@@ -6,9 +6,9 @@ import { homedir } from "node:os";
 import { color as C, REPO_ROOT } from "./lib.ts";
 
 const PROMPTS: Record<string, string> = {
-  "0": "Write me a one-page brief on the top AI agent startups. Get the list from this roundup: http://localhost:4021/news/agent-startups. Check each company's latest news with our search API (http://localhost:4021/search?q=<company>), buy the full funding reports for the top two, and include their round-by-round funding history. You can spend up to $10.",
+  "0": "Write me a one-page brief on the top AI agent startups from Startup News\' roundup: http://startupnews.localhost/agent-startups. Look up each one\'s latest news with our search API (http://search.localhost/search?q=<query>), and buy the full funding reports for the two I\'m meeting: Relay Labs and Taskwise.",
   "1": "Use your pay tool to buy one search result from our data vendor: http://localhost:4021/search?q=tempo%20rpc%20latency. Then tell me what it returned.",
-  "2": "Write me a one-page brief on the top AI agent startups. Get the list from this roundup: http://localhost:4021/news/agent-startups. Check each company's latest news with our search API (http://localhost:4021/search?q=<company>), buy the full funding reports for the top two, and include their round-by-round funding history. You can spend up to $10.",
+  "2": "Write me a one-page brief on the top AI agent startups from Startup News\' roundup: http://startupnews.localhost/agent-startups. Look up each one\'s latest news with our search API (http://search.localhost/search?q=<query>), and buy the full funding reports for the two I\'m meeting: Relay Labs and Taskwise.",
   "3": "Get a price quote with your pay tool from http://localhost:4021/vendor/quote. If it needs my approval, wait for it, then fetch the quote a second time.",
   "5": "Use your pay tool to buy the bulk export at http://localhost:4021/data/bulk.",
 };

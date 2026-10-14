@@ -28,23 +28,25 @@ const flat = (s: string, n: number) => {
 
 // What Reflex checked comes first. What the agent and the site say comes last and is
 // labeled: either can lie, and the agent's text may be trying to talk you into Approve.
+// Named, so nobody wonders who "they" are: the site's own description and the agent's stated reason.
 const claims = (p: CardPayment) => [
-  `<b>What they say</b> (not verified)`,
-  ...(p.description ? [`Site: <i>"${flat(p.description, 120)}"</i>`] : []),
-  `Agent: <i>"${flat(p.reason, 300)}"</i>`,
+  `<b>Not verified by Reflex</b>`,
+  ...(p.description ? [`${esc(p.host)}'s description: <i>"${flat(p.description, 120)}"</i>`] : []),
+  `${esc(p.agent_id)}'s reason: <i>"${flat(p.reason, 300)}"</i>`,
 ];
 
-const payLine = (p: CardPayment) =>
-  `<b>${usd(p.amount_usd)}</b> to <code>${short(p.recipient)}</code> on ${esc(p.host)}`;
+const payLine = (p: CardPayment) => `Wallet: <code>${short(p.recipient)}</code>`;
+
+// Check details are written lower-case for the agent's tool output; cards get sentence case.
+const sentence = (d: string) => esc(d.charAt(0).toUpperCase() + d.slice(1)).replace(/ to this address/, " to this wallet");
 
 export const paymentCard = (p: CardPayment, holdId: string): Card => ({
   text: [
-    `<b>${esc(p.agent_id)} wants to pay ${usd(p.amount_usd)}. Your OK?</b>`,
-    ``,
+    `<b>${esc(p.agent_id)} wants to pay ${usd(p.amount_usd)} to ${esc(p.host)}</b>`,
     payLine(p),
     ``,
     `<b>Why Reflex is asking</b>`,
-    ...p.checks.filter((c) => !c.pass).map((c) => `• ${esc(c.detail)}`),
+    ...p.checks.filter((c) => !c.pass).map((c) => `• ${sentence(c.detail)}`),
     ``,
     ...claims(p),
   ].join("\n"),
@@ -58,7 +60,7 @@ export const pauseCard = (p: CardPayment, limit: number, windowS: number): Card 
     `It tried ${limit} payments in ${windowS} seconds, which looks like a loop. ` +
     `Anything else it tries will wait until you decide.`,
     ``,
-    `Last attempt: ${payLine(p)}`,
+    `Last attempt: <b>${usd(p.amount_usd)}</b> to ${esc(p.host)} (wallet <code>${short(p.recipient)}</code>)`,
     ``,
     ...claims(p),
   ].join("\n"),

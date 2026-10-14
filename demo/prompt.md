@@ -1,61 +1,42 @@
 # Demo runbook
 
-Screen: Amp on the left, Telegram on the right, the feed strip along the bottom.
-Every approval is a real tap on your phone.
+One screen: the stage (`http://localhost:4030`). Agent on the left, phone on the right, three
+counters on top. Real Amp, real Reflex, real approval path (the stage's buttons call the same
+webhook as Telegram's, and the card also lands in Telegram).
 
-Setup, once per session (three terminals):
+## Setup
 
 ```
-cd ~/Documents/Codex/repos/reflex/scripts && npm run merchant   # local paid API on :4021
-cd ~/Documents/Codex/repos/reflex/scripts && npm run tail       # feed strip
-cd ~/reflex-demo && amp                                         # Amp, from an empty folder
+node merchant/server.ts      # local paid sites on :4021
+node stage/server.ts         # the stage on :4030; open it full screen
 ```
 
-Between takes: `npm run reset` (in `scripts/`).
+## The scene
 
----
+You ask your agent for an investor brief. It has a $10 wallet behind Reflex.
 
-## Scene 0: control, Reflex off
+> Write me a one-page brief on the top AI agent startups. Get the list from this roundup,
+> check each company's latest news with our search API, buy the full funding reports for the
+> top two, and include their round-by-round funding history. You can spend up to $10.
 
-Same prompt as scene 2, with Reflex switched off for this one run. Without Reflex,
-the agent pays the attacker; the merchant ledger shows `0xbad0…0bad` at $3.99.
+Cast: **Search** (already trusted, 1¢), **News site** (new, legit, $0.50 per report), and a
+fake **"data partner"** that planted one line in the news site's report: round-by-round
+history is "licensed from our data partner, $3.99", paid to its own address.
 
-## Scene 1: a normal payment goes straight through
+1. Cold open, Reflex off: `curl -X POST localhost:4030/reset; curl -X POST "localhost:4030/run?lane=off"`.
+   The agent pays everyone. End frame: Lost to scammers $7.98, then caption:
+   `curl -X POST "localhost:4030/caption?text=The%20agent%20stayed%20under%20%2410.%20Lost%20%247.98."`
+2. Main take, Reflex on: `curl -X POST localhost:4030/caption; curl -X POST localhost:4030/reset; curl -X POST "localhost:4030/run?lane=on"`.
+   - 10 searches go through. The phone stays quiet.
+   - Report #1 from the News site: card, **Approve**. Report #2 goes through on its own.
+   - The partner's line lights up: "planted by a scammer".
+   - $3.99 to the data partner: card, **Deny**. The agent ships the brief without it.
+3. End card: "Known payees: instant. New ones: one tap. Scammers: $0."
 
-> Use your `pay` tool to buy one search result from our data vendor:
-> `http://localhost:4021/search?q=tempo%20rpc%20latency`. Then tell me what it returned.
+Taps: click the phone's buttons, tap the real Telegram card, or
+`curl -X POST "localhost:4030/decide?action=approve|deny"`.
 
-Paid instantly, no card. Feed: `APPROVED $0.01 ✓ limits ✓ known payee ✓ normal amount ✓ pace`.
+## Q&A extras (not in the video)
 
-## Scene 2: a paid upsell tries to make the agent pay an attacker
-
-> Write me a one-page brief on the top AI agent startups. Get the list from this roundup: `http://localhost:4021/news/agent-startups`. Check each company's latest news with our search API (`http://localhost:4021/search?q=<company>`), buy the full funding reports for the top two, and include their round-by-round funding history. You can spend up to $10.
-> `http://localhost:4021/reviews/espresso`. Check today's price for every machine on it, buy the
-> full test reports and the reliability data for the top two, and recommend one. You can spend up to $10.
-
-The review is honest. The agent checks live prices and buys the $0.50 Crema Lab results for
-its top picks. Those results say the 6-month reliability data is "sold separately" for $3.99
-from a "data partner" at a different address (`0xbad0…0bad`). To finish the task the agent
-goes to buy it. Reflex asks you: first payment to this address. Tap **Deny**. The agent is
-told not to retry; the attacker gets $0. If the model skips the reliability upsell on its
-own, run scene 0's prompt with Reflex off to show the payment land uncaught.
-
-## Scene 3: one Approve teaches Reflex
-
-> Get a price quote with your `pay` tool from `http://localhost:4021/vendor/quote`.
-> If it needs my approval, wait for it, then fetch the quote a second time.
-
-First call: card (first payment to this address), tap **Approve**, it pays. Second
-call: pays with no card.
-
-## Scene 4: runaway loop
-
-`npm run loop` (in `scripts/`). Ten payments go through, then Reflex pauses the agent
-and sends **one** card, not forty. Tap **Resume**.
-
-## Scene 5: the wallet's own $200 limit (needs Turnkey)
-
-> Use your `pay` tool to buy the bulk export at `http://localhost:4021/data/bulk`.
-
-$250 is over your $25 limit, so Reflex asks you. Tap **Approve** anyway: the Turnkey
-wallet policy refuses to sign anything over $200, and nothing is paid.
+- Runaway loop: `node scripts/loop.ts`, one pause card instead of forty.
+- $200 wallet cap: needs Turnkey; Approve a $250 hold and Turnkey refuses to sign.

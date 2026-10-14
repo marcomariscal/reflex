@@ -76,6 +76,28 @@ function toUsd(amount: string, decimals: number) {
   return decimals ? `${s.slice(0, -decimals)}.${s.slice(-decimals)}` : s;
 }
 
+// Sites this agent has paid or been asked to pay, compared by their letters only: "startupnews-reports.test" and
+// "startupnews.test" share "startupnews". Returns the closest one paid at a different wallet.
+// deno-lint-ignore no-explicit-any
+async function lookalikeOf(tx: any, agentId: string, host: string | null, recipient: string) {
+  if (!host) return null;
+  const stem = (h: string) => h.split(":")[0].split(".")[0].replace(/[^a-z]/g, "");
+  const mine = stem(host);
+  if (mine.length < 5) return null;
+  const rows = await tx`
+    select distinct on (url) url, recipient from reflex.payments
+    where agent_id = ${agentId} and status in ('signed', 'held') and recipient <> ${recipient}
+    order by url, created_at desc limit 200`;
+  for (const r of rows) {
+    const paid = hostOf(r.url);
+    if (!paid) continue;
+    if (paid === host) return { host, paid, recipient: r.recipient as string, same: true };
+    const theirs = stem(paid);
+    if (theirs.length >= 5 && (mine.includes(theirs) || theirs.includes(mine))) return { host, paid, recipient: r.recipient as string };
+  }
+  return null;
+}
+
 // The host our MCP code actually fetched; unlike the challenge's realm, the merchant can't pick it.
 function hostOf(url: unknown): string | null {
   try {
@@ -126,6 +148,9 @@ async function score(req: Request, sql: Sql, agentId: string) {
     const overCap = micros(amt) > micros(a.cap);
     const capOk = !overCap && micros(a.today) + micros(amt) <= micros(a.daily);
     const known = a.base_max != null;
+    // A new payee whose site name looks like one already paid is the classic impostor (lookalike
+    // domain, different wallet). Say so on the card; the decision is still the payee check.
+    const lookalike = known ? null : await lookalikeOf(tx, agentId, hostOf(body.url), c.recipient);
     const amountOk = !known || micros(amt) <= 2 * micros(a.base_max);
     const velocityOk = !paused && a.recent < a.velocity_limit;
     // Plain-English details: they show up on the Telegram card and in the agent's tool output.
@@ -138,7 +163,16 @@ async function score(req: Request, sql: Sql, agentId: string) {
           ? `within your ${usd(a.cap)} per-payment and ${usd(a.daily)} daily limits`
           : `would bring today's spending to ${usd(a.today + amt)}, over your ${usd(a.daily)} daily limit`,
       },
-      { name: "payee", pass: known, detail: known ? "has paid this address before" : "first payment to this address" },
+      {
+        name: "payee", pass: known,
+        detail: known
+          ? "has paid this address before"
+          : lookalike?.same
+          ? `first payment to this address. ${lookalike.host} usually gets paid at ${short(lookalike.recipient)}, not this wallet`
+          : lookalike
+          ? `first payment to this address. ${lookalike.host} looks like ${lookalike.paid}, which uses a different wallet (${short(lookalike.recipient)})`
+          : "first payment to this address",
+      },
       {
         name: "amount", pass: amountOk,
         detail: !known
@@ -292,6 +326,7 @@ async function feed(url: URL, sql: Sql, agentId: string) {
     id: r.id, created_at: r.created_at, updated_at: r.updated_at, status: r.status, amount_usd: r.amount_usd,
     realm: r.realm, recipient: r.recipient, reason: r.reason,
     failed: (r.checks as Check[]).filter((k) => !k.pass).map((k) => k.name),
+    why: (r.checks as Check[]).filter((k) => !k.pass).map((k) => k.detail),
     tx_hash: r.tx_hash, http_status: r.http_status, hold_id: r.hold_id,
   }));
   return json({ items });
