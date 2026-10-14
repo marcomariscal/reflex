@@ -49,7 +49,7 @@ use test money; the same flow is verified on Tempo testnet (tx
 
 ## Run it
 
-Node 24 or newer (the `.ts` files run as-is, no build step). The Supabase CLI and Docker only if you want your own scorer.
+Node 24 or newer (the `.ts` files run as-is, no build step). The Supabase CLI for your own scorer; Docker only for the local variant.
 
 ```
 npm start
@@ -58,21 +58,55 @@ npm start
 That installs the deps on first run and starts the paid sites (`localhost:4021`, plus port 80 for the
 `*.localhost` names) and the one-screen demo view (`localhost:4030`).
 
-The scorer is a Supabase edge function; the demo runs against our hosted project. To run your own:
+The sites run with nothing else installed. For the actual firewall you need the scorer and,
+to tap on your phone, a Telegram bot. Both take a few minutes.
+
+### Your own scorer (Supabase)
+
+The scorer and the Telegram webhook are two edge functions on a Supabase project. The demo video
+uses ours; you need your own project (free tier is fine) because the agent key is per project.
 
 ```
-supabase start && supabase db reset        # schema, deny-all policies, seed
-supabase functions serve --env-file .env   # reflex-score and reflex-telegram on 127.0.0.1:54321
+cp .env.example .env                                   # then fill it in as you go
+openssl rand -hex 32                                   # run three times: REFLEX_AGENT_KEY, REFLEX_ADMIN_KEY, TELEGRAM_WEBHOOK_SECRET
+supabase login && supabase link --project-ref <ref>    # your project; put <ref> in .env's REFLEX_* URLs
+supabase db push                                       # schema and deny-all policies
+psql "$DB_URL" -f supabase/seed.sql                    # the demo agent; DB_URL is in the dashboard under Connect
+supabase secrets set REFLEX_ADMIN_KEY=... TELEGRAM_WEBHOOK_SECRET=...
+supabase functions deploy                              # both functions
 ```
 
-Then `cp .env.example .env`, point `REFLEX_SCORER_URL` at the local function, pick a
-`REFLEX_AGENT_KEY` and store its hash on the seeded agent (two commands at the top of
-[supabase/seed.sql](supabase/seed.sql)). Without `TELEGRAM_BOT_TOKEN` the cards are logged instead
-of sent and you tap them from the stage or with `curl` (see the runbook).
+Then store the agent key's hash on the seeded agent: the two commands at the top of
+[supabase/seed.sql](supabase/seed.sql). The key itself stays in `.env` and is the only thing the
+agent is given. `SUPABASE_DB_URL` is provided by the runtime; nothing else is needed for the local
+sites (`method=stub`). For Tempo testnet payments add `TEMPO_DEV_PRIVATE_KEY` (a funded throwaway key)
+to the secrets; for Turnkey, the `TURNKEY_*` secrets from `.env.example`.
 
-The agent side is one MCP server, `mcp/src/server.ts`, launched with `REFLEX_SCORER_URL` and
-`REFLEX_AGENT_KEY` in its env and nothing else ([mcp/amp-settings.example.json](mcp/amp-settings.example.json)
-for Amp; any MCP client works). `node scripts/loop.ts` drives the tool without an agent.
+Local alternative, no account: `supabase start && supabase db reset` (Docker; runs the migrations and
+seed), then `supabase functions serve --env-file .env` serves both functions at
+`http://127.0.0.1:54321/functions/v1/`; point the `REFLEX_*` URLs in `.env` there and set the key hash
+on the local database (`postgresql://postgres:postgres@127.0.0.1:54322/postgres`). Telegram can't
+reach a local webhook, so this runs in stub mode: cards are logged in the serve output and you tap
+them from the stage or with `curl` (see the runbook).
+
+### Telegram
+
+1. In Telegram, message `@BotFather`, send `/newbot`, and put the token it gives you in `.env` as
+   `TELEGRAM_BOT_TOKEN`.
+2. Send `/start` to your new bot (this is how the script learns your chat id).
+3. `node scripts/setup-telegram.ts`: finds your chat id and writes it to `.env`, points the bot's
+   webhook at `reflex-telegram` with your secret, and sends you a test message.
+4. `supabase secrets set TELEGRAM_BOT_TOKEN=... TELEGRAM_CHAT_ID=...` so the scorer can send cards
+   and the webhook only listens to you.
+
+Without a bot token the scorer still works; cards are logged instead of sent.
+
+### The agent
+
+One MCP server, `mcp/src/server.ts`, launched with `REFLEX_SCORER_URL` and `REFLEX_AGENT_KEY` in
+its env and nothing else ([mcp/amp-settings.example.json](mcp/amp-settings.example.json) for Amp;
+any MCP client works). `npm run loop` drives the tool without an agent, `npm run reset` gives you a
+clean slate between takes, and [demo/prompt.md](demo/prompt.md) is the scene.
 
 ## How it works
 
