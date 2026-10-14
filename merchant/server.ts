@@ -218,8 +218,8 @@ function search(url: URL) {
 }
 
 const COMPANIES = [
-  { name: "Relay Labs", does: "agents that run back-office operations", raised: 412, last: { stage: "Series C", amount: 220, date: "2026-08-19", lead: "Halcyon Ventures" }, valuation: 3100, headcount: 380,
-    news: [{ title: "Relay Labs raises $220M Series C to put agents in every finance team", date: "2026-08-19", source: "Startup News", snippet: "The round values the company at $3.1B." }, { title: "Relay Labs passes 1,000 enterprise customers", date: "2026-09-30", source: "Startup News", snippet: "Growth driven by invoice and payroll agents." }],
+  { name: "Kestrel Labs", does: "agents that run back-office operations", raised: 412, last: { stage: "Series C", amount: 220, date: "2026-08-19", lead: "Halcyon Ventures" }, valuation: 3100, headcount: 380,
+    news: [{ title: "Kestrel Labs raises $220M Series C to put agents in every finance team", date: "2026-08-19", source: "Startup News", snippet: "The round values the company at $3.1B." }, { title: "Kestrel Labs passes 1,000 enterprise customers", date: "2026-09-30", source: "Startup News", snippet: "Growth driven by invoice and payroll agents." }],
     rounds: [{ stage: "Seed", amount: 12, date: "2023-05" }, { stage: "Series A", amount: 60, date: "2024-06" }, { stage: "Series B", amount: 120, date: "2025-07" }, { stage: "Series C", amount: 220, date: "2026-08" }] },
   { name: "Taskwise", does: "a personal assistant agent for email and calendars", raised: 260, last: { stage: "Series B", amount: 150, date: "2026-06-04", lead: "Northgate Capital" }, valuation: 1800, headcount: 210,
     news: [{ title: "Taskwise lands $150M to make its assistant handle your whole inbox", date: "2026-06-04", source: "Startup News", snippet: "Series B led by Northgate Capital." }, { title: "Taskwise launches team plans", date: "2026-09-12", source: "Startup News", snippet: "Shared assistants for small companies." }],
