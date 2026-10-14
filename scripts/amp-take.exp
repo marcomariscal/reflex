@@ -6,12 +6,23 @@ set f [open [lindex $argv 0]]
 set prompt [read -nonewline $f]
 close $f
 
-proc show {} { set timeout 0; expect -re {.+} }
+# Pass the terminal's replies (Amp asks it about colors, cursor position, size) straight through to Amp,
+# and show Amp's output as it comes. Without this Amp can't draw until `interact`, and the typing is hidden.
+proc show {} {
+  global spawn_id user_spawn_id
+  set timeout 0
+  expect {
+    -i $user_spawn_id -re {.+} { send -i $spawn_id -- $expect_out(0,string); exp_continue }
+    -i $spawn_id -re {.+} { exp_continue }
+    timeout {}
+  }
+}
 proc wait_ms {ms} { set end [expr {[clock milliseconds] + $ms}]; while {[clock milliseconds] < $end} { show; after 15 } }
 proc rnd {lo hi} { return [expr {$lo + int(rand() * ($hi - $lo))}] }
 proc key {s} { send -- $s; show }
 
 spawn -noecho /Users/dev/.local/bin/amp -m external-agent:claude-code
+stty raw -echo
 wait_ms 6500
 
 set typo_done 0
@@ -52,5 +63,7 @@ while {$i < $n} {
   incr i
 }
 wait_ms [rnd 700 1100]
+# REFLEX_TAKE_DRY=1: type but don't send, for rehearsing the look without spending anything.
+if {[info exists env(REFLEX_TAKE_DRY)]} { wait_ms 4000; exit }
 send -- "\r"
 interact
