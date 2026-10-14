@@ -56,7 +56,7 @@ async function scorer<T>(method: "GET" | "POST", path: string, body?: unknown): 
 }
 
 async function bodyText(res: Response): Promise<string> {
-  let t = await res.text();
+  let t = (await res.text()).slice(0, 500_000); // a multi-MB page must not stall the regexes below
   if (/text\/html/i.test(res.headers.get("content-type") ?? "")) t = htmlToText(t);
   return t.length > MAX_BODY ? `${t.slice(0, MAX_BODY)}\n… (${t.length - MAX_BODY} more chars)` : t;
 }

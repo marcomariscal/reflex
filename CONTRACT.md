@@ -75,7 +75,7 @@ The MCP server reports what the merchant said after the paid retry.
 
 `GET /reflex-score/feed?since=<iso>` Returns up to 100 recent payments for this
 agent, newest last:
-`{ "items": [{ "id", "created_at", "status", "amount_usd", "realm", "recipient", "reason", "failed": string[], "tx_hash" }] }`
+`{ "items": [{ "id", "created_at", "status", "amount_usd", "realm", "recipient", "reason", "failed": string[], "why": string[], "tx_hash", "hold_id" }] }` (`why`: the failed checks in plain English)
 
 `POST /reflex-score/admin/reset` (admin) Clears this demo's payments and holds,
 unpauses the agent, and resets the baseline to the seed. Body `{ "agent": "amp-demo" }`.

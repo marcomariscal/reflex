@@ -1,20 +1,56 @@
 #!/usr/bin/expect -f
-# Start Amp's real interface in Claude Code mode and type the demo prompt like a person, keystroke by
-# keystroke and visible as it goes, then hand the session over.
+# Start Amp's real interface in Claude Code mode and type the demo prompt the way a person does:
+# quick bursts inside words, small pauses at spaces, longer ones after punctuation, the odd hesitation,
+# one fixed typo, and URLs pasted rather than typed. Visible keystroke by keystroke, then hand over.
 set f [open [lindex $argv 0]]
 set prompt [read -nonewline $f]
 close $f
+
+proc show {} { set timeout 0; expect -re {.+} }
+proc wait_ms {ms} { set end [expr {[clock milliseconds] + $ms}]; while {[clock milliseconds] < $end} { show; after 15 } }
+proc rnd {lo hi} { return [expr {$lo + int(rand() * ($hi - $lo))}] }
+proc key {s} { send -- $s; show }
+
 spawn -noecho /Users/dev/.local/bin/amp -m external-agent:claude-code
-# Let Amp draw its screen (expect only shows output while it is reading).
-set timeout 7
-expect -re {^\b$}
-foreach c [split $prompt ""] {
-  send -- $c
-  set timeout 0
-  expect -re {.+}
-  after [expr {35 + int(rand() * 70)}]
+wait_ms 6500
+
+set typo_done 0
+set i 0
+set n [string length $prompt]
+while {$i < $n} {
+  # URLs get pasted in one go, after a beat to "copy" them.
+  if {[regexp -start $i {^https?://[^\s)]+} [string range $prompt $i end] url]} {
+    wait_ms [rnd 500 900]
+    key $url
+    wait_ms [rnd 250 450]
+    incr i [string length $url]
+    continue
+  }
+  set c [string index $prompt $i]
+  # One natural typo, fixed: "breif" -> backspace x3 -> "ief".
+  if {!$typo_done && [string range $prompt $i [expr {$i + 4}]] eq "brief"} {
+    foreach ch {b r e i f} { key $ch; wait_ms [rnd 55 110] }
+    wait_ms [rnd 280 420]
+    foreach _ {1 2 3} { key "\177"; wait_ms [rnd 70 120] }
+    foreach ch {i e f} { key $ch; wait_ms [rnd 60 110] }
+    set typo_done 1
+    incr i 5
+    continue
+  }
+  key $c
+  set prev $c
+  if {$c eq " "} {
+    # Word boundary; now and then, a short think before the next word.
+    if {rand() < 0.08} { wait_ms [rnd 350 750] } else { wait_ms [rnd 70 180] }
+  } elseif {[string match {[,:;]} $c]} {
+    wait_ms [rnd 260 480]
+  } elseif {[string match {[.?!]} $c]} {
+    wait_ms [rnd 450 850]
+  } else {
+    wait_ms [rnd 35 95]
+  }
+  incr i
 }
-set timeout 1
-expect -re {^\b$}
+wait_ms [rnd 700 1100]
 send -- "\r"
 interact

@@ -24,7 +24,7 @@ the agent, $0.50 per report). The attack: Startup News' payment request for the 
 been tampered with to pay a stranger's wallet. Same site, same price; the agent can't see wallets,
 so it can't tell. Reflex can.
 
-1. Cold open, Reflex off (stage: `curl -X POST localhost:4030/reset; curl -X POST "localhost:4030/run?lane=off"`):
+1. Cold open, Reflex off (stage: `curl -H x-stage-operator:1 -X POST localhost:4030/reset; curl -H x-stage-operator:1 -X POST "localhost:4030/run?lane=off"`):
    the agent pays the hijacked wallet and reports success.
 2. Main take, Reflex on:
    - The searches go through. The phone stays quiet.
@@ -34,7 +34,7 @@ so it can't tell. Reflex can.
 3. End card: "Known sites: instant. New ones: one tap. Hijacked wallets: caught."
 
 Taps: click the phone's buttons, tap the real Telegram card, or
-`curl -X POST "localhost:4030/decide?action=approve|deny"`.
+`curl -H x-stage-operator:1 -X POST "localhost:4030/decide?action=approve|deny"`.
 
 ## Recording the real-window take (what the final video uses)
 

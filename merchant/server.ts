@@ -165,7 +165,8 @@ function handle(req: IncomingMessage, res: ServerResponse) {
     });
   }
 
-  const key = PAID[`${hostname}${path}`] ? `${hostname}${path}` : path;
+  const local = hostname === "localhost" || hostname === "127.0.0.1";
+  const key = PAID[`${hostname}${path}`] || !local ? `${hostname}${path}` : path;
   let route = PAID[key];
   if (!route) return send(res, 404, { error: "not found" });
   // The attack: Startup News' payment request for the Taskwise report has been tampered with. Same
@@ -287,7 +288,9 @@ function bulk(_url: URL, origin: string) {
   };
 }
 
-createServer(handle).listen(PORT, () => log(`listening on http://localhost:${PORT}`));
+// Loopback only (IPv4 and IPv6, since *.localhost may resolve to either); never the venue network.
+for (const addr of ["127.0.0.1", "::1"]) createServer(handle).listen(PORT, addr, () => log(`listening on http://localhost:${PORT} (${addr})`));
 // The .test sites on port 80, so their URLs read like real sites (no port). Needs /etc/hosts entries.
+// Port 80 can only be bound on all interfaces without admin rights. It serves only the fake sites.
 createServer(handle).listen(80, () => log("listening on http://search.test, startupnews.test, startupnews-reports.test"))
   .on("error", (e) => log(`port 80 unavailable (${(e as NodeJS.ErrnoException).code}); .test sites need it`));

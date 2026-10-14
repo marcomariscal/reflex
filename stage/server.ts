@@ -351,9 +351,16 @@ function json(res: ServerResponse, status: number, body: unknown) {
   res.end(JSON.stringify(body));
 }
 
-createServer(async (req, res) => {
+const handler = async (req: import("node:http").IncomingMessage, res: ServerResponse) => {
   const url = new URL(req.url ?? "/", `http://localhost:${PORT}`);
   const route = `${req.method} ${url.pathname}`;
+  // Controls (approve/deny, reset, run, caption) only from the stage page itself or an operator header.
+  // Without this, an agent's pay tool could POST /decide?action=approve and approve its own hold.
+  if (req.method === "POST") {
+    const origin = req.headers.origin ?? "";
+    const ok = origin === `http://localhost:${PORT}` || origin === `http://127.0.0.1:${PORT}` || req.headers["x-stage-operator"] === "1";
+    if (!ok) { res.writeHead(403); return res.end("forbidden"); }
+  }
   try {
     if (route === "GET /") {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" });
@@ -407,4 +414,6 @@ createServer(async (req, res) => {
     console.error(`[stage] ${route}: ${(e as Error).message}`);
     if (!res.headersSent) json(res, 500, { error: (e as Error).message });
   }
-}).listen(PORT, () => console.log(`[stage] http://localhost:${PORT}`));
+};
+// Loopback only (IPv4 and IPv6): the stage's controls must not be reachable from the venue network.
+for (const addr of ["127.0.0.1", "::1"]) createServer(handler).listen(PORT, addr, () => console.log(`[stage] http://localhost:${PORT} (${addr})`));

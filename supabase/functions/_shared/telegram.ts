@@ -34,9 +34,10 @@ const who = (_agentId: string) => "Your agent";
 function flag(c: Check): string {
   const d = c.detail;
   if (c.name === "payee") {
-    if (d.includes("usually gets paid")) return "⚠️ Not the wallet this site usually uses";
+    // "Payment details" is the phrase people know from invoice fraud; "wallet" reads as crypto jargon.
+    if (d.includes("usually gets paid")) return "⚠️ This site's payment details changed";
     const like = /looks like (\S+),/.exec(d);
-    if (like) return `⚠️ Looks like ${esc(like[1])}, but a different wallet`;
+    if (like) return `⚠️ Looks like ${esc(like[1])}, but different payment details`;
     return "New site, never paid before";
   }
   if (c.name === "cap") return d.includes("daily") ? "Over your daily limit" : "Over your per-payment limit";
@@ -108,6 +109,12 @@ export async function closeCard(
     entities: [...entities, { type: "bold", offset: original.length + 2, length: verb.length }],
     link_preview_options: { is_disabled: true },
   });
+}
+
+// Replace a card that another tap settled: same text plus a closing line, buttons removed.
+export async function retireCard(chat: number | string, messageId: number, html: string) {
+  if (!token) return console.log(`[telegram stub] retire card ${messageId}`);
+  await call("editMessageText", { chat_id: chat, message_id: messageId, text: html, parse_mode: "HTML", link_preview_options: { is_disabled: true } });
 }
 
 export async function answerCallback(id: string, text: string) {

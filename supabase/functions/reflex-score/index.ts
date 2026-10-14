@@ -76,24 +76,24 @@ function toUsd(amount: string, decimals: number) {
   return decimals ? `${s.slice(0, -decimals)}.${s.slice(-decimals)}` : s;
 }
 
-// Sites this agent has paid or been asked to pay, compared by their letters only: "startupnews-reports.test" and
-// "startupnews.test" share "startupnews". Returns the closest one paid at a different wallet.
+// Trusted wallets (seeded, or approved by the human) and the site each one belongs to. Pending holds never
+// count: a scam scored first must not make the legit wallet look like the stranger.
+// Same site, other wallet -> "usually gets paid at"; similar site name -> "looks like".
 // deno-lint-ignore no-explicit-any
 async function lookalikeOf(tx: any, agentId: string, host: string | null, recipient: string) {
-  if (!host) return null;
-  const stem = (h: string) => h.split(":")[0].split(".")[0].replace(/[^a-z]/g, "");
-  const mine = stem(host);
-  if (mine.length < 5) return null;
+  const site = host?.split(":")[0];
+  if (!site) return null;
+  const stem = (h: string) => h.split(".")[0].replace(/[^a-z]/g, "");
   const rows = await tx`
-    select distinct on (url) url, recipient from reflex.payments
-    where agent_id = ${agentId} and status in ('signed', 'held') and recipient <> ${recipient}
-    order by url, created_at desc limit 200`;
+    select recipient, host from reflex.baselines
+    where agent_id = ${agentId} and host is not null and recipient <> ${recipient}`;
+  const same = rows.find((r: { host: string }) => r.host === site);
+  if (same) return { host: site, paid: site, recipient: same.recipient as string, same: true };
+  const mine = stem(site);
+  if (mine.length < 5) return null;
   for (const r of rows) {
-    const paid = hostOf(r.url);
-    if (!paid) continue;
-    if (paid === host) return { host, paid, recipient: r.recipient as string, same: true };
-    const theirs = stem(paid);
-    if (theirs.length >= 5 && (mine.includes(theirs) || theirs.includes(mine))) return { host, paid, recipient: r.recipient as string };
+    const theirs = stem(r.host);
+    if (theirs.length >= 5 && (mine.includes(theirs) || theirs.includes(mine))) return { host: site, paid: r.host as string, recipient: r.recipient as string };
   }
   return null;
 }
@@ -211,7 +211,7 @@ async function score(req: Request, sql: Sql, agentId: string) {
       // max_usd only moves on a human Approve; letting auto-signs raise it would let a payee ratchet 2x per call.
       await tx`
         update reflex.baselines
-        set payment_count = payment_count + 1, last_paid_at = now()
+        set payment_count = payment_count + 1, last_paid_at = now(), host = coalesce(host, ${hostOf(body.url)?.split(":")[0] ?? null})
         where agent_id = ${agentId} and recipient = ${c.recipient}`;
       return { status: 200, body: { decision: "sign", payment_id: paymentId, checks, credential: signed.credential } };
     }
@@ -248,7 +248,7 @@ async function notify(holdId: string, card: Card) {
   if (!messageId) return;
   const sql = connect();
   try {
-    await sql`update reflex.holds set telegram_message_id = ${messageId} where id = ${holdId}`;
+    await sql`update reflex.holds set telegram_message_id = ${messageId}, card_text = ${card.text} where id = ${holdId}`;
   } finally {
     await sql.end({ timeout: 5 });
   }

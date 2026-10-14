@@ -2,13 +2,16 @@
 // Callback data: approve:<hold_id> | deny:<hold_id> | resume:<agent_id> | keep:<agent_id>
 import { connect, type Sql } from "../_shared/db.ts";
 import { background, json, safeEq, UUID } from "../_shared/http.ts";
-import { answerCallback, closeCard } from "../_shared/telegram.ts";
+import { answerCallback, closeCard, retireCard } from "../_shared/telegram.ts";
 
 const SECRET = Deno.env.get("TELEGRAM_WEBHOOK_SECRET") ?? "";
 // Unset (stub mode): any callback carrying the secret header counts, so tests can drive it.
 const CHAT_ID = Deno.env.get("TELEGRAM_CHAT_ID");
 
-type Decision = { ok: true; result: string; verb: string; rest: string } | { ok: false; error: string };
+// `trusted`: other cards for the same wallet that this Approve settled (approve once, not once per card).
+type Decision =
+  | { ok: true; result: string; verb: string; rest: string; trusted?: { message_id: number; card_text: string }[] }
+  | { ok: false; error: string };
 
 Deno.serve(async (req) => {
   if (req.method !== "POST" || !safeEq(req.headers.get("x-telegram-bot-api-secret-token") ?? "", SECRET)) {
@@ -37,6 +40,7 @@ Deno.serve(async (req) => {
     if (d.ok && q.message?.message_id && q.message?.text) {
       await closeCard(chat, q.message.message_id, q.message.text, q.message.entities ?? [], d.verb, `by ${who}. ${d.rest}`);
     }
+    for (const t of (d.ok && d.trusted) || []) await retireCard(chat, t.message_id, `${t.card_text}\n\n<b>Approved</b>: you just trusted this site.`);
     return json(d.ok ? { ok: true, result: d.result } : d);
   } catch (e) {
     console.error(e);
@@ -56,7 +60,8 @@ async function decideHold(sql: Sql, action: "approve" | "deny", holdId: string, 
   if (!UUID.test(holdId)) return { ok: false, error: "bad hold id" };
   return await sql.begin(async (tx): Promise<Decision> => {
     const [h] = await tx`
-      select h.status, h.payment_id, p.agent_id, p.recipient, p.amount_usd
+      select h.status, h.payment_id, p.agent_id, p.recipient, p.amount_usd,
+        split_part(split_part(split_part(p.url, '://', 2), '/', 1), ':', 1) as host
       from reflex.holds h join reflex.payments p on p.id = h.payment_id
       where h.id = ${holdId}
       for update of h`;
@@ -69,17 +74,24 @@ async function decideHold(sql: Sql, action: "approve" | "deny", holdId: string, 
       await tx`update reflex.payments set status = 'denied' where id = ${h.payment_id}`;
       return { ok: true, result: status, verb: "Denied", rest: "Nothing was paid." };
     }
-    // The learning: this address becomes trusted at this amount. The payment itself signs on the agent's next poll.
-    const [b] = await tx`
-      insert into reflex.baselines (agent_id, recipient, max_usd, payment_count, source, last_paid_at)
-      values (${h.agent_id}, ${h.recipient}, ${h.amount_usd}::numeric, 1, 'approved', now())
+    // The learning: this wallet becomes trusted, for this site, at this amount. The payment itself signs on
+    // the agent's next poll.
+    await tx`
+      insert into reflex.baselines (agent_id, recipient, max_usd, payment_count, source, last_paid_at, host)
+      values (${h.agent_id}, ${h.recipient}, ${h.amount_usd}::numeric, 1, 'approved', now(), nullif(${h.host}, ''))
       on conflict (agent_id, recipient) do update
       set max_usd = greatest(baselines.max_usd, excluded.max_usd), payment_count = baselines.payment_count + 1,
-        last_paid_at = now()
-      returning max_usd::float8 as max_usd`;
+        last_paid_at = now(), host = coalesce(baselines.host, excluded.host)`;
+    // Approve once: other pending payments to this same wallet, within 2x of this amount, are approved too.
+    const trusted = await tx`
+      update reflex.holds h set status = 'approved', decided_by = ${by + " (trusted)"}, decided_at = now()
+      from reflex.payments p
+      where h.payment_id = p.id and h.agent_id = ${h.agent_id} and h.kind = 'payment' and h.status = 'pending'
+        and h.id <> ${holdId} and p.recipient = ${h.recipient} and p.amount_usd <= 2 * ${h.amount_usd}::numeric
+      returning h.telegram_message_id as message_id, h.card_text`;
     return {
-      ok: true, result: status, verb: "Approved",
-      rest: "Trusted from now on.",
+      ok: true, result: status, verb: "Approved", rest: "Trusted from now on.",
+      trusted: trusted.filter((t: { message_id: number | null; card_text: string | null }) => t.message_id && t.card_text),
     };
   });
 }
