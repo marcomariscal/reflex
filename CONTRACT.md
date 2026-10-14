@@ -16,9 +16,10 @@ with `verify_jwt = false` and do their own auth.
 
 Local `.env` (gitignored) holds `REFLEX_AGENT_KEY`, `REFLEX_ADMIN_KEY`,
 `TELEGRAM_WEBHOOK_SECRET`, URLs, and the user's Turnkey/Telegram values.
-Server secrets already set: `REFLEX_ADMIN_KEY`, `TELEGRAM_WEBHOOK_SECRET`,
-`REFLEX_SIGNER=stub`. Later: `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID`,
-`TURNKEY_*`, `REFLEX_SIGNER=turnkey`.
+Server secrets: `REFLEX_ADMIN_KEY`, `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_BOT_TOKEN`,
+`TELEGRAM_CHAT_ID` (`SUPABASE_DB_URL` is provided by the runtime). The challenge's
+`method` picks the signer: `stub` needs nothing; `tempo` uses `TURNKEY_*` when set,
+else `TEMPO_DEV_PRIVATE_KEY` on testnet only.
 
 ## Normalized challenge
 
@@ -110,15 +111,20 @@ with the secret header.
 
 MPP-style 402s. Paid retries carry `Authorization: Payment <credential>`.
 
+Routes are keyed by host + path. The `*.localhost` names map to the `*.test` keys below and are
+served on port 80 so their URLs read like real sites; bare `localhost:4021` paths work for the
+scripts.
+
 | Route | Price | Recipient | Purpose |
 |---|---|---|---|
-| `GET /news/agent-startups` | free | n/a | the roundup page (`demo/planted.html`) |
-| `GET /search?q=` | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | Search, trusted from the seed |
-| `GET /news/funding-report?company=` | $0.50 | NEW `0x7e4d000000000000000000000000000000000042` | News site, a legit new payee; its report carries the scammer's line |
-| `GET /funding-data?company=` | $3.99 | EVIL `0xbad0000000000000000000000000000000000bad` | the fake "data partner" |
+| `GET startupnews.test/agent-startups` | free | n/a | the roundup page (`demo/planted.html`) |
+| `GET search.test/search?q=` (also `/search`) | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | Search, trusted from the seed |
+| `GET startupnews.test/funding-report?company=` | $0.50 | NEW `0x7e4d000000000000000000000000000000000042` | News site, a legit new payee |
+| …same route, `company=Taskwise` | $0.50 | EVIL `0xbad0000000000000000000000000000000000bad` | the hijack: same site, same price, attacker's wallet; returns a "processing" stub |
+| `GET startupnews-reports.test/funding-report` | $4.99 | EVIL | impostor domain (lookalike scene) |
 | `GET /vendor/quote` | $0.05 | NEW | approve-teaches scene |
 | `GET /data/bulk` | $250.00 | LEGIT | $200 backstop scene |
-| `GET /_ledger` | free | n/a | `{ recipient: total_usd_paid }` to prove what moved |
+| `GET /_ledger` | free | n/a | `{ recipient: total_usd_paid }` to prove what moved; `POST /_ledger/reset` zeroes it |
 
 Stub credential: base64url JSON `{ "challenge": { "id": ... }, "payload": { "type": "stub", "signature": "stub-<payment_id>" } }`.
 The merchant accepts it only for a challenge id it issued.

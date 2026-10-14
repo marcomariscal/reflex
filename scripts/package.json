@@ -2,9 +2,9 @@
   "name": "reflex-scripts",
   "private": true,
   "type": "module",
-  "description": "Reflex demo verification scripts. Node 25 runs these .ts files natively.",
+  "description": "Reflex demo verification scripts. Node 24+ runs these .ts files natively.",
   "engines": {
-    "node": ">=25"
+    "node": ">=24"
   },
   "scripts": {
     "merchant": "cd .. && node merchant/server.ts",

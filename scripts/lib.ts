@@ -5,7 +5,11 @@ import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js"
 import { fileURLToPath } from "node:url";
 
 export const REPO_ROOT = fileURLToPath(new URL("..", import.meta.url));
-process.loadEnvFile(`${REPO_ROOT}.env`);
+try {
+  process.loadEnvFile(`${REPO_ROOT}.env`);
+} catch {
+  process.stderr.write("[reflex] no .env in the repo root (cp .env.example .env); scorer calls will fail until it exists\n");
+}
 const env = (k: string) => process.env[k] ?? "";
 export const MERCHANT_URL = process.env.REFLEX_MERCHANT_URL ?? "http://localhost:4021";
 

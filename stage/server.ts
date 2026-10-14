@@ -416,4 +416,7 @@ const handler = async (req: import("node:http").IncomingMessage, res: ServerResp
   }
 };
 // Loopback only (IPv4 and IPv6): the stage's controls must not be reachable from the venue network.
-for (const addr of ["127.0.0.1", "::1"]) createServer(handler).listen(PORT, addr, () => console.log(`[stage] http://localhost:${PORT} (${addr})`));
+for (const addr of ["127.0.0.1", "::1"]) {
+  createServer(handler).listen(PORT, addr, () => console.log(`[stage] http://localhost:${PORT} (${addr})`))
+    .on("error", (e) => console.log(`[stage] ${addr}:${PORT} unavailable (${(e as NodeJS.ErrnoException).code}); skipping`));
+}

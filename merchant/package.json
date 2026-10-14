@@ -7,5 +7,7 @@
   "scripts": {
     "start": "node server.ts"
   },
-  "engines": { "node": ">=25" }
+  "engines": {
+    "node": ">=24"
+  }
 }

@@ -5,11 +5,10 @@
   "type": "module",
   "description": "Reflex MCP server: the pay tool, routed through the Reflex scorer",
   "scripts": {
-    "start": "node src/server.ts",
-    "e2e": "node test/e2e.ts"
+    "start": "node src/server.ts"
   },
   "engines": {
-    "node": ">=25"
+    "node": ">=24"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.32.1",
