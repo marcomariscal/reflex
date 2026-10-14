@@ -112,11 +112,10 @@ MPP-style 402s. Paid retries carry `Authorization: Payment <credential>`.
 
 | Route | Price | Recipient | Purpose |
 |---|---|---|---|
-| `GET /reviews/espresso` | free | n/a | the review page (`demo/planted.html`) |
-| `GET /prices?model=` | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | price checks (trusted from the seed) |
-| `GET /reviews/espresso/lab-results?model=` | $0.50 | NEW `0x7e4d000000000000000000000000000000000042` | Crema Lab, a legit new payee; its JSON carries the scam pitch |
-| `GET /reliability?model=` | $3.99 | EVIL `0xbad0000000000000000000000000000000000bad` | the scam "data partner" |
-| `GET /search?q=` | $0.01 | LEGIT | single normal payment |
+| `GET /news/agent-startups` | free | n/a | the roundup page (`demo/planted.html`) |
+| `GET /search?q=` | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | Search, trusted from the seed |
+| `GET /news/funding-report?company=` | $0.50 | NEW `0x7e4d000000000000000000000000000000000042` | News site, a legit new payee; its report carries the scammer's line |
+| `GET /funding-data?company=` | $3.99 | EVIL `0xbad0000000000000000000000000000000000bad` | the fake "data partner" |
 | `GET /vendor/quote` | $0.05 | NEW | approve-teaches scene |
 | `GET /data/bulk` | $250.00 | LEGIT | $200 backstop scene |
 | `GET /_ledger` | free | n/a | `{ recipient: total_usd_paid }` to prove what moved |
