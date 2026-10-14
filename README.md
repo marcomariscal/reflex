@@ -193,6 +193,8 @@ but not yet in use, so the wallet-side $200 cap is not live.
 - **Signals across users.** Never share approvals, but share counts: "approved by 40 people" can skip
   the tap for tiny payments, "denied by 12 this week" gets a stronger warning, weighted by account age
   and real spending so fake accounts can't game it.
+- **Sites that declare their wallet.** A wallet address the site signs and publishes on its own domain
+  catches a swapped wallet even on the very first payment.
 - **Fewer taps.** Tiny first payments to new wallets ($0.01 searches) sign without asking; trusted
   directories of known merchants count as "paid before".
 - **Mandates.** A task-scoped budget and payee set granted up front ("$5, these two sites, next hour"),
