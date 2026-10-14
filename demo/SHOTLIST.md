@@ -13,7 +13,7 @@ strip (`npm run tail`) along the bottom. Runbook and prompts: `demo/prompt.md`.
 |---|-------|-----|----------|------|
 | 0 | Control: no Reflex | Amp, Reflex off | The agent pays the hijacked wallet and reports success: merchant `/_ledger` shows `0xbad0…0bad` at $0.50 | stub |
 | 1 | Normal payment | Amp | Paid instantly, no card; feed `APPROVED` with all four checks green | stub + testnet |
-| 2 | Hijacked wallet | Amp | Card: "⚠️ Not the wallet this site usually uses"; tap Deny; agent told not to retry; attacker gets $0 | stub |
+| 2 | Hijacked wallet | Amp | Card: "⚠️ This site's payment details changed"; tap Deny; agent told not to retry; attacker gets $0 | stub |
 | 3 | One Approve teaches Reflex | Amp | Card, tap Approve, paid; second call paid with no card | stub + testnet |
 | 4 | Runaway loop | `npm run loop` | 25 paid, then paused; exactly **one** card; tap Resume | stub |
 | 5 | Wallet's $200 limit | Amp | $250 card; tap Approve anyway; Turnkey refuses to sign; nothing paid | needs Turnkey |

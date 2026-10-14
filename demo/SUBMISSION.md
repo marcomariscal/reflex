@@ -19,7 +19,7 @@ to a stranger's wallet, same site, same price. The agent can't tell. Reflex can.
 **The problem:**
 Per-request payments (MPP, x402) let agents pay any service with no signup. The first time an
 agent can pay, it will pay whoever asks: a swapped recipient address is invisible to the model,
-because the model never sees wallets. Spending limits cap the loss but don't prevent it. Asking the
+because it only asks to pay a URL and keeps no record of which wallet each site uses. Spending limits cap the loss but don't prevent it. Asking the
 model to spot fraud fails on exactly the attacks that don't show up in the text.
 
 **What's novel:**
@@ -29,7 +29,8 @@ model to spot fraud fails on exactly the attacks that don't show up in the text.
   a payee can't ratchet its way up 2x per call.
 - Payment-redirect detection with no vendor list: "this site usually gets paid at a different wallet"
   comes from the agent's own baseline.
-- Fail closed, and the hard cap lives in the wallet (Turnkey policy), outside the scorer.
+- Fails closed: scorer down means no payments. Next, the hard rules move into the wallet itself,
+  under your passkey, so the scorer can block a payment but never allow one on its own.
 
 **How it works:**
 `pay` fetches the URL. On a 402 it parses the Machine Payments Protocol challenge and posts it to
@@ -42,12 +43,15 @@ Decimals come from a stablecoin allowlist, never from the merchant.
 End to end on Tempo testnet: a new wallet held, approved by a real tap, paid on-chain, and the next
 payment to that wallet signed with no card. Tx
 `0xdb9ad202889f059852f9993918a2702e8426ae732bd0c8ffa4b286734f0cd1c3`. The demo sites run locally
-with test money so we control the attacker; the 402 flow, signatures and transfer are real.
+with test payments so we control the attacker; the agent, the 402 flow, the scorer and the Telegram
+taps are real, and the testnet tx above is a real on-chain transfer through the same flow.
 
 **What's not (yet):**
 The Turnkey signer is built and probed against Turnkey's API but not in use, so the wallet-enforced
-$200 cap isn't live. Next: tiny first payments without a tap, trusted merchant directories,
-task-scoped mandates, and more rails (x402) next to MPP.
+$200 cap isn't live. Each person runs their own copy today. Next: a hosted version that can only
+say no (tap Start in Telegram, Face ID creates a passkey wallet, Reflex gets a limited key with your
+approved wallets and caps), trust shared across your agents, signals across users, tiny first payments
+without a tap, task-scoped mandates, and more rails (x402) next to MPP.
 
 **Stack:**
 TypeScript on Node 24, MCP SDK, Supabase (Postgres + Deno edge functions), mppx (Machine Payments

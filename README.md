@@ -10,7 +10,7 @@ agent ──pay(url, reason)──> Reflex ──ok──> wallet signs ──> 
                               └─unusual──> Telegram: [Approve] [Deny]
 ```
 
-**Demo video (2 min):** _link goes here_ · Built at Paradigm Frontiers, October 2026.
+**Demo video (1 min):** _link goes here_ · Built at Paradigm Frontiers, October 2026.
 
 ## What it checks
 
@@ -23,17 +23,19 @@ Every payment, in milliseconds, against facts the agent can't fake:
 | Amount | no more than 2x the most you've approved for that wallet |
 | Pace | fewer than 25 payments a minute (a burst pauses the agent: one card, not forty) |
 
-Any failure holds the payment and sends a Telegram card. Approve teaches Reflex that wallet.
-The agent's stated reason is shown on the card but never used to decide, because a tricked agent
+Any failure holds the payment and sends a Telegram card. Approve teaches Reflex that wallet: it
+remembers the wallet, the site it was paid through and the amount, and lets that wallet through from
+then on, up to 2x the most you've approved. Automatic payments never raise that ceiling; only your tap
+does. Deny teaches nothing. The agent's stated reason is shown on the card but never used to decide, because a tricked agent
 writes convincing reasons.
 
 Four rules, on purpose. They're checked against the agent's own payment history, so there's no
 model to fool and no vendor list to maintain. Smarter scoring can be added behind the same `hold`;
 the point is that the decision never depends on what the agent says.
 
-When a site you've paid shows up with a different wallet, the card says so: "⚠️ Not the wallet this
-site usually uses." That's the classic payment-redirect fraud, and the agent can't see it because it
-never sees wallets.
+When a site you've paid shows up with a different wallet, the card says so: "⚠️ This site's payment
+details changed." That's the classic payment-redirect fraud. The agent can't catch it: it only asks to
+pay a URL, and it keeps no record of which wallet each site uses. Reflex does.
 
 ## The demo
 
@@ -120,12 +122,27 @@ clean slate between takes, and [demo/prompt.md](demo/prompt.md) the scene.
   mppx (pull mode, exact amount, only to the scored recipient), or holds and sends the card.
   Decimals come from a USD-stablecoin allowlist, never from the merchant.
 - **`supabase/functions/reflex-telegram`** The Approve/Deny webhook (secret header, owner's chat only).
-- **Signer** Turnkey when configured (built and probed against Turnkey's API), otherwise a throwaway
-  testnet key. Turnkey adds hardware key custody and a $200-per-payment cap the wallet itself enforces.
+- **Signer** A throwaway testnet key today. Turnkey support is built and probed against Turnkey's API
+  but not yet in use.
 - **`merchant/`** Local MPP sites for the demo. **`stage/`** An optional one-screen demo view.
   **`scripts/`** Demo drivers (loop, reset, feed strip, Telegram setup, the Amp take launcher).
 
 Interfaces are in [CONTRACT.md](CONTRACT.md).
+
+## Tradeoffs
+
+- **Self-hosted and custodial today.** Each person runs their own copy (above), which is a lot of setup,
+  and that copy holds the signing key. Hacked, it can sign anything the wallet allows. Down, the agent
+  can't pay at all (it fails closed). The plan fixes both: a hosted Reflex that can only say no.
+- **The first approval is a judgment call.** Approve a bad site once and it's trusted, up to 2x the most
+  you've approved for it and within your limits.
+- **New wallets cost a tap.** An agent that shops around asks more often.
+- **It judges the money, not the goods.** It catches a new or swapped wallet, a jump in amount and a
+  burst. It doesn't catch paying the right site for junk, or slow overcharging under the limits.
+- **Only as strong as the isolation.** If the agent has another way to pay (a card, an API key with
+  billing), Reflex never sees it.
+- **Trust is per agent today.** Two agents of yours learn separately. It should be per person, shared
+  across your agents, with a budget per agent.
 
 ## Objections
 
@@ -133,15 +150,19 @@ Interfaces are in [CONTRACT.md](CONTRACT.md).
   payments (MPP, x402) let agents pay any service with no signup. The first time they can, they'll pay
   whoever asks. Reflex is the reflex in between.
 - **"Why not just set a spending limit?"** Limits cap the loss; they don't prevent it. The agent in the
-  demo stayed well inside any budget and still paid the wrong wallet.
+  demo stayed well inside any budget and still tried to pay a stranger's wallet.
 - **"Why not let the model spot scams?"** It does, when it can see them: Claude refused every injected
   upsell we tried. It can't see a swapped wallet. Reflex judges the money, not the story.
 - **"So it asks me about every new vendor?"** Once per wallet, forever. Then only when something
   changes: a new wallet, a bigger amount, a burst.
-- **"Isn't this centralized?"** Yes, by design: a firewall you run. It fails closed (scorer down means
-  no payments), and the hard cap lives in the wallet, outside Reflex.
-- **"Are the sites fake?"** Yes, simulated locally so we control the attacker. The 402 flow, the
-  signatures and the Tempo transfer are real (testnet tx above).
+- **"Isn't this centralized?"** Today it's a copy you run, and it fails closed (scorer down means no
+  payments). The plan is hosted but non-custodial: the wallet enforces the hard rules under your
+  passkey, so Reflex can block a payment but never allow one on its own (see What's next).
+- **"Who's going to set all this up?"** Nobody should have to. Today it's a developer setup; the hosted
+  version is one tap in Telegram, Face ID, and one line pasted into your agent.
+- **"Are the sites fake?"** Yes, simulated locally so we control the attacker, and they take test
+  payments. The agent, the 402 flow, Reflex and the Telegram taps are real, and the same flow settles
+  a real stablecoin transfer on Tempo testnet (tx above).
 
 ## Status
 
@@ -151,8 +172,21 @@ but not yet in use, so the wallet-side $200 cap is not live.
 
 ## What's next
 
-- **Keys you don't hold.** Turnkey custody with the $200 cap enforced by the wallet policy, so even a
-  compromised scorer can't move more than that.
+- **Hosted, but it can only say no.** No setup: open the Reflex bot in Telegram, tap Start, confirm
+  with Face ID to create a Tempo account whose main key is your passkey, and paste one line into your
+  agent. Reflex gets only a limited key: the wallets you've approved and a daily cap, changeable only
+  with your passkey, so approving a new wallet is a Face ID tap. Reflex keeps the smart checks (a site's
+  wallet changed, lookalike sites, bursts) but can only block. Hacked, it can't add a wallet or lift a
+  cap. Down, payments to approved wallets still go through. Shut down, the account is still yours.
+  Tempo has the wallet side built in: passkey accounts can hand out limited keys with per-token
+  spending limits, an expiry and an allowlist of recipients ([Account Keychain](https://tempo.xyz/developers/docs/protocol/transactions/AccountKeychain)).
+  Still to check on testnet: that recipient allowlists are live, and that our payments take the limited
+  path (the docs exclude `transferFrom`). Turnkey policies are the fallback for other chains.
+- **Trust per person, budgets per agent.** Approve a site once for all your agents; each agent keeps its
+  own limit and loop detection, under one daily total.
+- **Signals across users.** Never share approvals, but share counts: "approved by 40 people" can skip
+  the tap for tiny payments, "denied by 12 this week" gets a stronger warning, weighted by account age
+  and real spending so fake accounts can't game it.
 - **Fewer taps.** Tiny first payments to new wallets ($0.01 searches) sign without asking; trusted
   directories of known merchants count as "paid before".
 - **Mandates.** A task-scoped budget and payee set granted up front ("$5, these two sites, next hour"),

@@ -29,7 +29,7 @@ so it can't tell. Reflex can.
 2. Main take, Reflex on:
    - The searches go through. The phone stays quiet.
    - Kestrel Labs report: "New site, never paid before". **Approve**. Trusted from now on.
-   - Taskwise report: "⚠️ Not the wallet this site usually uses". **Deny**. Nothing was paid.
+   - Taskwise report: "⚠️ This site's payment details changed". **Deny**. Nothing was paid.
    - The agent finishes and says why it didn't get the Taskwise report.
 3. End card: "Known sites: instant. New ones: one tap. Hijacked wallets: caught."
 
@@ -45,7 +45,7 @@ Two windows only: Amp on the left, Telegram (the Reflex chat, history cleared) o
 3. Launch Amp with the prompt typed at human speed:
    `ghostty -e /bin/zsh -lc "cd ~/reflex-demo && expect <repo>/scripts/amp-take.exp <repo>/demo/take-prompt.txt"`
 4. In Telegram: **Approve** the "New site, never paid before" card (Kestrel Labs report), **Deny** the
-   "⚠️ Not the wallet this site usually uses" card (Taskwise report).
+   "⚠️ This site's payment details changed" card (Taskwise report).
 5. Amp finishes and explains the blocked payment. Stop recording.
 6. Cut without a Screen Studio license: stitch the project's raw segments and render.
    `cd "<project>.screenstudio/recording" && cat channel-1-display-0-0000.mp4 $(ls channel-1-display-0-*.m4s | sort) > /tmp/raw.mp4`
