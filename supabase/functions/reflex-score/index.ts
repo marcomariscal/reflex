@@ -38,6 +38,17 @@ Deno.serve(async (req) => {
   }
 });
 
+// Tempo TIP-20 USD stablecoins (all 6 decimals). Anything else is refused, so amount_usd is real dollars.
+const USD_STABLES = new Set([
+  "0x20c0000000000000000000000000000000000000", // pathUSD (mainnet and testnet)
+  "0x20c000000000000000000000b9537d11c60e8b50", // USDC.e mainnet
+  "0x20c0000000000000000000009e8d7eb59b783726", // USDC.e testnet
+  "0x20c00000000000000000000014f22ca97301eb73", // USDT0 mainnet
+  "0x20c0000000000000000000000000000000000001", // AlphaUSD testnet
+  "0x20c0000000000000000000000000000000000002", // BetaUSD testnet
+  "0x20c0000000000000000000000000000000000003", // ThetaUSD testnet
+]);
+
 // deno-lint-ignore no-explicit-any
 function parseChallenge(c: any): Challenge | string {
   if (!c || typeof c !== "object") return "challenge is required";
@@ -45,12 +56,15 @@ function parseChallenge(c: any): Challenge | string {
     if (typeof c[k] !== "string" || !c[k]) return `challenge.${k} must be a non-empty string`;
   }
   if (typeof c.amount !== "string" || !/^\d{1,30}$/.test(c.amount)) return "challenge.amount must be a base-unit integer string";
-  if (!Number.isInteger(c.decimals) || c.decimals < 0 || c.decimals > 18) return "challenge.decimals must be an integer 0-18";
+  // Decimals come from our own currency list, never from the wire: a merchant claiming 12 decimals
+  // would make a $250 transfer score as $0.00025.
+  const known = c.method === "stub" ? c.currency === "USD" : USD_STABLES.has(c.currency.toLowerCase());
+  if (!known) return `unsupported currency ${c.currency} for ${c.method}`;
   const recipient = String(c.recipient ?? "").toLowerCase();
   if (!/^0x[0-9a-f]{40}$/.test(recipient)) return "challenge.recipient must be a 0x address";
   if (c.expires != null && Number.isNaN(Date.parse(c.expires))) return "challenge.expires must be an ISO date or null";
   return {
-    id: c.id, realm: c.realm, method: c.method, intent: c.intent, amount: c.amount, decimals: c.decimals,
+    id: c.id, realm: c.realm, method: c.method, intent: c.intent, amount: c.amount, decimals: 6,
     currency: c.currency, recipient, chainId: typeof c.chainId === "number" ? c.chainId : null,
     expires: c.expires ?? null, raw: c.raw,
   };
@@ -92,7 +106,10 @@ async function score(req: Request, sql: Sql, agentId: string) {
   const paymentId = crypto.randomUUID();
 
   const out = await sql.begin(async (tx) => {
-    // The agent row lock serializes scoring per agent, so concurrent calls can't slip past caps or velocity.
+    // Take the agent row lock in its own statement first. Under READ COMMITTED a combined
+    // "select ... for update" reads its subqueries from the pre-lock snapshot, so concurrent calls
+    // would all see today=0 and recent=0 and slip past the caps.
+    await tx`select 1 from reflex.agents where id = ${agentId} for update`;
     const [a] = await tx`
       select a.per_payment_cap_usd::float8 as cap, a.daily_cap_usd::float8 as daily,
         a.velocity_limit, a.velocity_window_s, a.paused_at, b.max_usd::float8 as base_max,
@@ -103,8 +120,7 @@ async function score(req: Request, sql: Sql, agentId: string) {
             and p.created_at > greatest(now() - make_interval(secs => a.velocity_window_s), a.resumed_at)) as recent
       from reflex.agents a
       left join reflex.baselines b on b.agent_id = a.id and b.recipient = ${c.recipient}
-      where a.id = ${agentId}
-      for update of a`;
+      where a.id = ${agentId}`;
 
     const paused = a.paused_at != null;
     const overCap = micros(amt) > micros(a.cap);

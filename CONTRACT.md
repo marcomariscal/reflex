@@ -112,12 +112,14 @@ MPP-style 402s. Paid retries carry `Authorization: Payment <credential>`.
 
 | Route | Price | Recipient | Purpose |
 |---|---|---|---|
-| `GET /search?q=` | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | normal paid call (baselined) |
-| `GET /premium/benchmarks` | $4.99 | EVIL `0xbad0000000000000000000000000000000000bad` | poisoned pay target |
-| `GET /vendor/quote` | $0.05 | NEW `0x7e4d000000000000000000000000000000000042` | approve-learns scene |
+| `GET /reviews/espresso` | free | n/a | the review page (`demo/planted.html`) |
+| `GET /prices?model=` | $0.01 | LEGIT `0x5ea7c0de00000000000000000000000000000001` | price checks (trusted from the seed) |
+| `GET /reviews/espresso/lab-results?model=` | $0.50 | NEW `0x7e4d000000000000000000000000000000000042` | Crema Lab, a legit new payee; its JSON carries the scam pitch |
+| `GET /reliability?model=` | $3.99 | EVIL `0xbad0000000000000000000000000000000000bad` | the scam "data partner" |
+| `GET /search?q=` | $0.01 | LEGIT | single normal payment |
+| `GET /vendor/quote` | $0.05 | NEW | approve-teaches scene |
 | `GET /data/bulk` | $250.00 | LEGIT | $200 backstop scene |
-| `GET /blog/rpc-benchmarks` | free | n/a | serves `demo/planted.html` |
-| `GET /_ledger` | free | n/a | `{ recipient: total_usd_paid }` to prove no funds moved |
+| `GET /_ledger` | free | n/a | `{ recipient: total_usd_paid }` to prove what moved |
 
 Stub credential: base64url JSON `{ "challenge": { "id": ... }, "payload": { "type": "stub", "signature": "stub-<payment_id>" } }`.
 The merchant accepts it only for a challenge id it issued.

@@ -24,7 +24,7 @@ const AGENT_KEY = process.env.REFLEX_AGENT_KEY ?? "";
 const HOLD_WAIT_S = Number(process.env.REFLEX_HOLD_WAIT_S ?? 120);
 const BYPASS = process.env.REFLEX_BYPASS === "1";
 const POLL_MS = 2000;
-const MAX_BODY = 4000;
+const MAX_BODY = 8000;
 
 type Check = { name: string; pass: boolean; detail: string };
 type Decision =
@@ -56,8 +56,25 @@ async function scorer<T>(method: "GET" | "POST", path: string, body?: unknown): 
 }
 
 async function bodyText(res: Response): Promise<string> {
-  const t = await res.text();
+  let t = await res.text();
+  if (/text\/html/i.test(res.headers.get("content-type") ?? "")) t = htmlToText(t);
   return t.length > MAX_BODY ? `${t.slice(0, MAX_BODY)}\n… (${t.length - MAX_BODY} more chars)` : t;
+}
+
+// Pages come back as the readable text a browser tool would show an agent, not markup.
+function htmlToText(html: string): string {
+  const entities: Record<string, string> = {
+    nbsp: " ", amp: "&", lt: "<", gt: ">", quot: '"', "#39": "'", mdash: "—", ndash: "–", times: "×", middot: "·",
+    hellip: "…", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“",
+  };
+  return html
+    .replace(/<(script|style)[\s\S]*?<\/\1>|<!--[\s\S]*?-->/gi, "")
+    .replace(/<br\s*\/?>|<\/(p|div|h[1-6]|li|tr|table|section|article|header|footer)>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&([a-z]+|#39);/g, (m, e) => entities[e] ?? m)
+    .replace(/[ \t]+/g, " ")
+    .replace(/\s*\n\s*/g, "\n")
+    .trim();
 }
 
 const failedChecks = (checks: Check[] = []) =>
@@ -191,7 +208,7 @@ async function pay(args: { url: string; reason: string; method?: "GET" | "POST";
       if (h.credential) return payAndSettle(url, req, c, h.credential, `Owner approved ${what}`, h.payment_id ?? d.payment_id);
       return out(`${held}\nApproved, but Reflex returned no credential. Not paid. Do not retry.`, true);
     case "denied":
-      return out(`${held}\nPayment denied by the owner. Do not retry, and do not look for another way to pay for this.`, true);
+      return out(`${held}\nPayment denied by the owner. Do not retry or pay for this another way. Continue the task without it.`, true);
     case "failed":
       return out(`${held}\nThe owner approved it, but signing failed: ${h.error ?? "unknown error"}. Not paid. Do not retry.`, true);
     case "error":

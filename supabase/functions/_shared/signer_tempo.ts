@@ -20,7 +20,7 @@ const need = (k: string) => {
 // so the live path can be proven before the Turnkey org exists.
 let account: Promise<LocalAccount> | undefined;
 function getAccount(): Promise<LocalAccount> {
-  return (account ??= (async () => {
+  account ??= (async () => {
     const org = Deno.env.get("TURNKEY_ORGANIZATION_ID");
     if (org) {
       const tk = new Turnkey({
@@ -35,7 +35,10 @@ function getAccount(): Promise<LocalAccount> {
     const dev = Deno.env.get("TEMPO_DEV_PRIVATE_KEY");
     if (dev && chainId === TESTNET) return privateKeyToAccount(dev as `0x${string}`);
     throw new Error("no tempo signer: set TURNKEY_* secrets (or TEMPO_DEV_PRIVATE_KEY on testnet)");
-  })());
+  })();
+  // Don't cache a failure: one transient Turnkey error would otherwise fail every later signature.
+  account.catch(() => { account = undefined; });
+  return account;
 }
 
 export async function sign(challenge: Challenge, rawHeader: string, _paymentId: string): Promise<Signed> {
@@ -51,6 +54,9 @@ export async function sign(challenge: Challenge, rawHeader: string, _paymentId: 
   // expectedRecipients also rejects any split payout to an address we didn't score.
   const credential = await tempo.charge({
     account: await getAccount(),
+    // Pull only: we hand back a signed tx and the merchant broadcasts it. A challenge advertising
+    // push-only would otherwise make us broadcast from inside the scoring transaction.
+    mode: "pull",
     expectedChainId: chainId,
     expectedRecipients: [challenge.recipient as `0x${string}`],
   }).createCredential({ challenge: ch, context: {} });

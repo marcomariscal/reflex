@@ -41,7 +41,6 @@ export function parseChallenge(header: string): Challenge {
   const details = (req.methodDetails ?? {}) as Record<string, any>;
   const amount = String(req.amount ?? "");
   if (!/^\d+$/.test(amount)) throw new Error(`Payment challenge has a bad amount: ${JSON.stringify(req.amount)}`);
-  const decimals = Number(req.decimals ?? details.decimals ?? DEFAULT_DECIMALS);
   const chainId = details.chainId ?? req.chainId;
   return {
     id: c.id,
@@ -49,7 +48,7 @@ export function parseChallenge(header: string): Challenge {
     method: c.method,
     intent: c.intent,
     amount,
-    decimals: Number.isInteger(decimals) ? decimals : DEFAULT_DECIMALS,
+    decimals: DEFAULT_DECIMALS, // display only; the scorer derives decimals from its own currency list
     currency: String(req.currency ?? ""),
     recipient: String(req.recipient ?? "").toLowerCase(),
     chainId: chainId == null ? null : Number(chainId),
