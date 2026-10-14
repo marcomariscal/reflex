@@ -289,7 +289,10 @@ function bulk(_url: URL, origin: string) {
 }
 
 // Loopback only (IPv4 and IPv6, since *.localhost may resolve to either); never the venue network.
-for (const addr of ["127.0.0.1", "::1"]) createServer(handle).listen(PORT, addr, () => log(`listening on http://localhost:${PORT} (${addr})`));
+for (const addr of ["127.0.0.1", "::1"]) {
+  createServer(handle).listen(PORT, addr, () => log(`listening on http://localhost:${PORT} (${addr})`))
+    .on("error", (e) => log(`${addr}:${PORT} unavailable (${(e as NodeJS.ErrnoException).code}); skipping`));
+}
 // The .test sites on port 80, so their URLs read like real sites (no port). Needs /etc/hosts entries.
 // Port 80 can only be bound on all interfaces without admin rights. It serves only the fake sites.
 createServer(handle).listen(80, () => log("listening on http://search.test, startupnews.test, startupnews-reports.test"))
