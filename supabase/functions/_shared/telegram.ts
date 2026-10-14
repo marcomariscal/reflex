@@ -26,43 +26,38 @@ const flat = (s: string, n: number) => {
   return esc(t.length > n ? `${t.slice(0, n)}…` : t);
 };
 
-// What Reflex checked comes first. What the agent and the site say comes last and is
-// labeled: either can lie, and the agent's text may be trying to talk you into Approve.
-// Named, so nobody wonders who "they" are: the site's own description and the agent's stated reason.
-const claims = (p: CardPayment) => [
-  `<b>Not verified by Reflex</b>`,
-  ...(p.description ? [`${esc(p.host)}'s description: <i>"${flat(p.description, 120)}"</i>`] : []),
-  `${esc(p.agent_id)}'s reason: <i>"${flat(p.reason, 300)}"</i>`,
-];
+// Cards carry only what a human needs to decide in two seconds: amount, site, the one reason, what it's for.
+// The agent's ID is internal and which program runs it doesn't matter to the approver. With one agent
+// per owner, "Your agent" says everything needed.
+const who = (_agentId: string) => "Your agent";
 
-const payLine = (p: CardPayment) => `Wallet: <code>${short(p.recipient)}</code>`;
-
-// Check details are written lower-case for the agent's tool output; cards get sentence case.
-const sentence = (d: string) => esc(d.charAt(0).toUpperCase() + d.slice(1)).replace(/ to this address/, " to this wallet");
+function flag(c: Check): string {
+  const d = c.detail;
+  if (c.name === "payee") {
+    if (d.includes("usually gets paid")) return "⚠️ Not the wallet this site usually uses";
+    const like = /looks like (\S+),/.exec(d);
+    if (like) return `⚠️ Looks like ${esc(like[1])}, but a different wallet`;
+    return "New site, never paid before";
+  }
+  if (c.name === "cap") return d.includes("daily") ? "Over your daily limit" : "Over your per-payment limit";
+  if (c.name === "amount") return "More than double your usual for this site";
+  return "Paying unusually fast";
+}
 
 export const paymentCard = (p: CardPayment, holdId: string): Card => ({
   text: [
-    `<b>${esc(p.agent_id)} wants to pay ${usd(p.amount_usd)} to ${esc(p.host)}</b>`,
-    payLine(p),
-    ``,
-    `<b>Why Reflex is asking</b>`,
-    ...p.checks.filter((c) => !c.pass).map((c) => `• ${sentence(c.detail)}`),
-    ``,
-    ...claims(p),
+    `<b>${who(p.agent_id)} wants to pay ${usd(p.amount_usd)} to ${esc(p.host)}</b>`,
+    // amount is implied by a payee flag when both fail; keep the most telling reason first
+    ...p.checks.filter((c) => !c.pass).sort((a, b) => (a.name === "payee" ? -1 : b.name === "payee" ? 1 : 0)).map(flag),
+    `<i>${flat(p.reason, 90)}</i>`,
   ].join("\n"),
   buttons: [["Approve", `approve:${holdId}`], ["Deny", `deny:${holdId}`]],
 });
 
 export const pauseCard = (p: CardPayment, limit: number, windowS: number): Card => ({
   text: [
-    `<b>Reflex paused ${esc(p.agent_id)}</b>`,
-    ``,
-    `It tried ${limit} payments in ${windowS} seconds, which looks like a loop. ` +
-    `Anything else it tries will wait until you decide.`,
-    ``,
-    `Last attempt: <b>${usd(p.amount_usd)}</b> to ${esc(p.host)} (wallet <code>${short(p.recipient)}</code>)`,
-    ``,
-    ...claims(p),
+    `<b>${who(p.agent_id)} is paused</b>`,
+    `${limit} payments in ${windowS} seconds looks like a loop. Nothing else gets paid until you decide.`,
   ].join("\n"),
   buttons: [["Resume", `resume:${p.agent_id}`], ["Keep paused", `keep:${p.agent_id}`]],
 });
