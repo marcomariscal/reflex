@@ -2,7 +2,8 @@
 
 A payment firewall for AI agents. Your agent never holds a key: it can only spend by calling one
 tool, `pay`, and every payment goes through Reflex. Normal payments go straight through. Anything
-unusual waits for one tap on your phone.
+unusual waits for one tap on your phone, including the scam the agent can't see: a site you trust
+whose payment request now pays someone else's wallet.
 
 ```
 agent ──pay(url, reason)──> Reflex ──ok──> wallet signs ──> Tempo (money moves)
@@ -10,16 +11,18 @@ agent ──pay(url, reason)──> Reflex ──ok──> wallet signs ──> 
                               └─unusual──> Telegram: [Approve] [Deny]
 ```
 
-**Demo video (1 min):** _link goes here_ · Built at Paradigm Frontiers, October 2026.
+[![Reflex demo: same site, same price, different wallet](demo/demo-still.jpg)](https://youtu.be/Eqy-g3q2Ah4)
+
+**[Watch the 1-minute demo](https://youtu.be/Eqy-g3q2Ah4)** · Built at Paradigm Frontiers, October 2026.
 
 ## What it checks
 
-Every payment, in milliseconds, against facts the agent can't fake:
+Every payment, before anything is signed, against facts the agent can't fake:
 
 | Check | Signs automatically when |
 |---|---|
+| Payee | you've paid this wallet before, or approved it once. A site you know asking for a new wallet, or a lookalike site name, says so on the card |
 | Limits | under $25 per payment and $100 per day |
-| Payee | you've paid this wallet before, or approved it once |
 | Amount | no more than 2x the most you've approved for that wallet |
 | Pace | fewer than 25 payments a minute (a burst pauses the agent: one card, not forty) |
 
@@ -151,8 +154,11 @@ Interfaces are in [CONTRACT.md](CONTRACT.md).
   whoever asks. Reflex is the reflex in between.
 - **"Why not just set a spending limit?"** Limits cap the loss; they don't prevent it. The agent in the
   demo stayed well inside any budget and still tried to pay a stranger's wallet.
-- **"Why not let the model spot scams?"** It does, when it can see them: Claude refused every injected
-  upsell we tried. It can't see a swapped wallet. Reflex judges the money, not the story.
+- **"Why not let the model spot scams?"** It can when the scam is in the text. A swapped wallet isn't:
+  same site, same page, same price. Reflex judges the money, not the story.
+- **"What if the wallet is swapped on the very first payment?"** Then the card says "New site, never
+  paid before" and Reflex can't tell the difference. That's trust on first use, the same limit as SSH.
+  Signals across users and sites that declare their own wallet (What's next) close it.
 - **"So it asks me about every new vendor?"** Once per wallet, forever. Then only when something
   changes: a new wallet, a bigger amount, a burst.
 - **"Isn't this centralized?"** Today it's a copy you run, and it fails closed (scorer down means no

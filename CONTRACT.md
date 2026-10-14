@@ -5,7 +5,7 @@ The interfaces between the pieces. If you change one, change it here first.
 ```
 Amp ──stdio──> mcp/ (pay tool) ──HTTP──> merchant (MPP 402)       [agent side, local]
                      │
-                     └──HTTPS──> supabase reflex-score ──> Turnkey (sign)   [server side]
+                     └──HTTPS──> supabase reflex-score ──> signer (testnet key; Turnkey built, unused)   [server side]
                                         │
                                         └──> Telegram <── reflex-telegram (buttons)
 ```

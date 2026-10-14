@@ -5,13 +5,13 @@ Copy from here into the hackathon form. Everything matches the README; edit both
 **Project name:** Reflex
 
 **Tagline (one line):**
-A payment firewall for AI agents: one `pay` tool, four checks, one tap for anything unusual.
+A payment firewall for AI agents: it catches the swapped wallet your agent can't see, and asks you with one tap.
 
 **Short description (~100 words):**
 Reflex sits between an AI agent and its wallet. The agent never holds a key; it can only spend by
 calling one MCP tool, `pay`. Every HTTP 402 payment request is scored server-side against the
 agent's own history: spending caps, a wallet it has paid before, an amount in line with what you've
-approved, and pace. Routine payments sign in milliseconds. Anything unusual holds and sends a
+approved, and pace. Routine payments sign with no human in the loop. Anything unusual holds and sends a
 Telegram card: Approve teaches Reflex that wallet, Deny means nothing moves. The agent's stated
 reason is shown but never trusted. In the demo, a tampered payment request sends a report purchase
 to a stranger's wallet, same site, same price. The agent can't tell. Reflex can.
@@ -23,12 +23,12 @@ because it only asks to pay a URL and keeps no record of which wallet each site 
 model to spot fraud fails on exactly the attacks that don't show up in the text.
 
 **What's novel:**
+- Payment-redirect detection with no vendor list: Reflex remembers which wallet each site gets paid
+  at, so "same site, same price, different wallet" is caught even though the agent sees nothing wrong.
 - The decision never depends on what the agent says. Reflex judges the money (amount, recipient,
   history, pace), not the story. The agent's reason is displayed to the human and ignored by the scorer.
 - Approve is the only thing that raises trust. Auto-signed payments never widen a wallet's limit, so
   a payee can't ratchet its way up 2x per call.
-- Payment-redirect detection with no vendor list: "this site usually gets paid at a different wallet"
-  comes from the agent's own baseline.
 - Fails closed: scorer down means no payments. Next, the hard rules move into the wallet itself,
   under your passkey, so the scorer can block a payment but never allow one on its own.
 
@@ -41,7 +41,7 @@ Decimals come from a stablecoin allowlist, never from the merchant.
 
 **What's built:**
 End to end on Tempo testnet: a new wallet held, approved by a real tap, paid on-chain, and the next
-payment to that wallet signed with no card. Tx
+payment to that wallet signed with no card. Example transfer (a $0.10 pathUSD payment):
 `0xdb9ad202889f059852f9993918a2702e8426ae732bd0c8ffa4b286734f0cd1c3`. The demo sites run locally
 with test payments so we control the attacker; the agent, the 402 flow, the scorer and the Telegram
 taps are real, and the testnet tx above is a real on-chain transfer through the same flow.
@@ -57,15 +57,10 @@ without a tap, task-scoped mandates, and more rails (x402) next to MPP.
 TypeScript on Node 24, MCP SDK, Supabase (Postgres + Deno edge functions), mppx (Machine Payments
 Protocol), Tempo testnet, viem, Turnkey SDK, Telegram Bot API.
 
-**To run it yourself (optional):** clone, `npm start`, and in `.env` set `REFLEX_AGENT_KEY` to the
-guest key below. Then `npm test` runs the scenes against our hosted scorer with no further setup: the
-searches and the first report pay instantly, the hijacked request is held with "usually gets paid at
-a different wallet", the attacker's ledger stays at $0. (The guest agent has Startup News
-pre-trusted, since you can't tap Approve on our phone.)
-
-Guest key: _paste here; form only, never the repo_
+**To run it yourself (optional):** the README's "Run it" section: `npm start` for the demo sites,
+your own Supabase project and Telegram bot for the firewall, `npm test` for the scenes.
 
 **Links:**
 - Repo: https://github.com/marcomariscal/reflex
-- Demo video: _link goes here_
+- Demo video: https://youtu.be/Eqy-g3q2Ah4
 - Testnet tx: `0xdb9ad202889f059852f9993918a2702e8426ae732bd0c8ffa4b286734f0cd1c3`

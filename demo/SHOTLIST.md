@@ -6,8 +6,8 @@ the recording shows the must-see. Anything short of that is reported as unproven
 `npm test` (`scripts/test.ts`) runs scenes 1-4 through the real pay tool and
 checks the same must-sees from the feed and the merchant ledger.
 
-Screen layout for every scene: Amp on the left, Telegram on the right, the feed
-strip (`npm run tail`) along the bottom. Runbook and prompts: `demo/prompt.md`.
+Screen layout for every scene: Amp on the left, Telegram on the right. The feed
+strip (`npm run tail`) is optional, for live runs. Runbook and prompts: `demo/prompt.md`.
 
 | # | Scene | How | Must-see | Lane |
 |---|-------|-----|----------|------|
@@ -16,7 +16,7 @@ strip (`npm run tail`) along the bottom. Runbook and prompts: `demo/prompt.md`.
 | 2 | Hijacked wallet | Amp | Card: "⚠️ This site's payment details changed"; tap Deny; agent told not to retry; attacker gets $0 | stub |
 | 3 | One Approve teaches Reflex | Amp | Card, tap Approve, paid; second call paid with no card | stub + testnet |
 | 4 | Runaway loop | `npm run loop` | 25 paid, then paused; exactly **one** card; tap Resume | stub |
-| 5 | Wallet's $200 limit | Amp | $250 card; tap Approve anyway; Turnkey refuses to sign; nothing paid | needs Turnkey |
+| 5 | Wallet's $200 limit (not recorded: Turnkey isn't in use yet) | Amp | $250 card; tap Approve anyway; Turnkey refuses to sign; nothing paid | needs Turnkey |
 
 Proven on Tempo testnet already (2026-10-13): a new address was held, approved by a
 real tap, then paid on-chain; the second payment went through with no card.
