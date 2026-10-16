@@ -11,9 +11,9 @@ agent ──pay(url, reason)──> Reflex ──ok──> wallet signs ──> 
                               └─unusual──> Telegram: [Approve] [Deny]
 ```
 
-[![Reflex demo: same site, same price, different wallet](demo/demo-still.jpg)](https://youtu.be/Eqy-g3q2Ah4)
+https://github.com/user-attachments/assets/761f745d-730d-4733-b464-6d4ac0a3e80f
 
-**[Watch the 1-minute demo](https://youtu.be/Eqy-g3q2Ah4)** · Built at Paradigm Frontiers, October 2026.
+1-minute demo ([also on YouTube](https://youtu.be/Eqy-g3q2Ah4)) · Built at Paradigm Frontiers, October 2026.
 
 ## What it checks
 
